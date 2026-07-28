@@ -1,6 +1,6 @@
 # Card Ability Ledger
 
-This table is generated from `/home/clop/citadel/suffering/engine/src/suffering/cards.yaml` on 2026-07-28. Verify the art mapping and values first; once confirmed, this becomes the implementation checklist. `-` means the YAML does not specify a value yet.
+This table is generated from [`cards.yaml`](cards.yaml) on 2026-07-28. That YAML is the canonical structured source for card text, immunity, VP, crusade points, copies, and ability keys. Verify the art mapping and values first; once confirmed, this becomes the implementation checklist. `-` means the YAML does not specify a value yet.
 
 ## YAML Catalogue (44 Entries)
 
@@ -26,7 +26,7 @@ This table is generated from `/home/clop/citadel/suffering/engine/src/suffering/
 | resident_leper | leper.webp | resident_commoner | 1 | - | 1 | - | counts_as_resident_epidemic_still_moves | Does not die from epidemics. |
 | resident_preacher | preacher.webp | resident_clergy | - | - | - | - | local_crusade | All crusaders in this city go on crusade. |
 | resident_bandit | burglar.webp | resident_commoner | 2 | 55 | -2 | -1 | self_only_kill_courtier_in_other_city | Own city only; kills a courtier in another city. |
-| resident_harlot | whore.webp | resident_commoner | 2 | 69 | 1 | - | replace_another_woman_in_this_city | Discard another woman here and replace her with the Harlot. |
+| resident_harlot | whore.webp | resident | 2 | 69 | 2 | -1 | lure_monk_from_other_city | Lures a Monk from another city into the Harlot's city. |
 | resident_recruiter | recruit.webp | resident_commoner | 2 | 31 | 2 | 3 | send_peaceful_residents_to_crusade | Sends selected non-crusader residents on crusade using VP as crusade points. |
 | resident_knight | knight.webp | resident_nobility | 3 | 65 | 5 | 5 | self_play_requires_discard | Discard a card to play into own city; otherwise play only in another city. |
 | resident_guard | guard.webp | resident_commoner | 2 | 39 | 3 | 2 | imprison_top_deck_card_until_guard_leaves | Imprisons the top deck card until the Guard leaves. |
@@ -46,8 +46,8 @@ This table is generated from `/home/clop/citadel/suffering/engine/src/suffering/
 | resident_corpse | corpse.webp | resident_misc | - | - | 0 | - | todo_corpse | Cannot be killed or crusaded; can be moved or burned. |
 | resident_crossbowman | crossbowman.webp | resident_commoner | 2 | 49 | 2 | 3 | todo_crossbowman | Shoots a character on the Crossroads. |
 | resident_cupbearer | cupbearer.webp | resident_commoner | 2 | 89 | 1 | 2 | todo_cupbearer | Swaps a courtier here for a commoner from another city. |
-| resident_devka | devka.webp | resident_commoner | - | 69 | 2 | -1 | lures_monk_from_another_city | Lures a Monk from another city. |
-| resident_hare | hare.webp | resident_misc | 1 | 72 | -1 | - | trade_any_resident_for_resident_from_crossroad | Trades any city resident for a Crossroads resident. |
+| resident_devka | devka.webp | resident | - | 69 | 2 | -1 | todo_devka | Lures a Monk from another city. |
+| resident_hare | hare.webp | resident | 1 | 72 | -1 | - | todo_hare | Trades any city resident for a Crossroads resident. |
 | resident_midget | midget.webp | resident_commoner | 1 | 8 | 1 | - | todo_midget | Does not count as a person; follows any resident moved from its city. |
 | resident_virgin | virgin.webp | resident_commoner | 1 | 21 | 1 | 1 | todo_virgin | On crusading, replace with the first male from the deck. |
 
