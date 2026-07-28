@@ -1,3 +1,5 @@
+import { CARD_COUNTS } from './card-counts.js';
+
 const resident = (id, title, estate, immunity, vp, copies, effect = '', crusade = 0, artId = id) => ({ id, title, estate, immunity, vp, copies, effect, crusade, epidemic: false, art: `/assets/cards/${artId}.webp` });
 const disease = (id, title, victims, effect = '') => ({ id, title, victims, copies: 1, effect, epidemic: true, art: `/assets/cards/${id}.webp` });
 
@@ -34,7 +36,7 @@ export const CARD_LIBRARY = [
 ];
 
 export function buildDeck() {
-  return CARD_LIBRARY.flatMap((card) => Array.from({ length: card.copies }, (_, index) => ({ ...card, uid: `${card.id}-${index}-${Math.random().toString(36).slice(2)}` })));
+  return CARD_LIBRARY.flatMap((card) => Array.from({ length: CARD_COUNTS[card.id] }, (_, index) => ({ ...card, uid: `${card.id}-${index}-${Math.random().toString(36).slice(2)}` })));
 }
 
 export function shuffle(cards) {

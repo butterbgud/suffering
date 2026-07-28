@@ -82,7 +82,6 @@ export default function App() {
       if (!card) return finish(next);
       next.players[next.current].hand.push(card);
       next.phase = 'draw-crossroads';
-      next.log.unshift(`${current.name} берёт карту из колоды.`);
     });
     say('Теперь выбери одну карту с перекрёстка.');
   }
@@ -95,7 +94,6 @@ export default function App() {
       const replacement = next.deck.shift();
       if (replacement) next.crossroads.push(replacement);
       next.phase = 'play';
-      next.log.unshift(`${current.name} забирает «${card.title}» с перекрёстка.`);
     });
     say('Разыграй обе карты. В свой город или в чужой.');
   }
@@ -206,12 +204,12 @@ export default function App() {
       const bot = next.players[next.current];
       if (next.phase === 'draw-deck') {
         const card = next.deck.shift(); if (!card) return finish(next);
-        bot.hand.push(card); next.phase = 'draw-crossroads'; next.log.unshift(`${bot.name} берёт карту из колоды.`);
+        bot.hand.push(card); next.phase = 'draw-crossroads';
       } else if (next.phase === 'draw-crossroads') {
         const index = Math.floor(Math.random() * next.crossroads.length);
         const card = next.crossroads.splice(index, 1)[0]; bot.hand.push(card);
         const replacement = next.deck.shift(); if (replacement) next.crossroads.push(replacement);
-        next.phase = 'play'; next.log.unshift(`${bot.name} берёт карту с перекрёстка.`);
+        next.phase = 'play';
       } else if (next.phase === 'play') {
         const card = bot.hand[0];
         const weakest = [...next.players].sort((a, b) => score(a) - score(b))[0];
