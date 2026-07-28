@@ -4,6 +4,7 @@ import { buildDeck, shuffle } from './cards.js';
 const NAMES = ['Конста', 'Гертруда', 'Ульрих', 'Ингеборга', 'Тибальт', 'Матильда'];
 const BOT_NAMES = ['Гертруда', 'Ульрих', 'Ингеборга', 'Тибальт', 'Матильда'];
 const CRUSADE_POOL = { 2: 16, 3: 16, 4: 20, 5: 23, 6: 25 };
+const RELIC_VP = 6;
 
 function freshGame(botCount) {
   const deck = shuffle(buildDeck());
@@ -28,7 +29,7 @@ function freshGame(botCount) {
 function score(player) {
   const peasants = player.city.filter((card) => card.id === 'peasant').length;
   const monks = player.city.filter((card) => card.id === 'monk').length;
-  return player.city.reduce((total, card) => total + card.vp + (card.id === 'peasant' ? peasants - 1 : 0) - (card.id === 'monk' ? (monks - 1) * 2 : 0), 0) + player.relics * 4;
+  return player.city.reduce((total, card) => total + card.vp + (card.id === 'peasant' ? peasants - 1 : 0) - (card.id === 'monk' ? (monks - 1) * 2 : 0), 0) + player.relics * RELIC_VP;
 }
 
 function recordHistory(game, label) {
@@ -49,6 +50,7 @@ function City({ player, active, selectedCard, onPlace, infection }) {
     <button className="city-head" onClick={onPlace} disabled={!selectedCard}>
       <span>{player.name}</span><b>{score(player)} ПО</b><i>{player.crusade} ✠</i>
     </button>
+    {player.relics > 0 && <div className="relics">{Array.from({ length: player.relics }, (_, index) => <div className="relic-card" key={index} title={`Реликвия: +${RELIC_VP} победных очков`}><span>✠</span><b>Реликвия</b><i>+{RELIC_VP} ПО</i></div>)}</div>}
     {infection?.host === player.id && <div className="infection"><span>☠</span><strong>{infection.card.title}</strong><em>{infection.power} жертв.</em></div>}
     <div className="lanes">
       {estates.map((estate) => <div className="lane" key={estate}>
@@ -165,7 +167,8 @@ export default function App() {
     if (next.crusadeRound <= 3 && next.crusadePool === 0) {
       const winner = [...next.players].sort((a, b) => b.crusade - a.crusade || a.relics - b.relics || b.city.filter((card) => card.estate === 'священники').length - a.city.filter((card) => card.estate === 'священники').length || score(a) - score(b))[0];
       winner.relics += 1;
-      next.log.unshift(`${winner.name} получает Реликвию за ${winner.crusade} очков Похода.`);
+      next.log.unshift(`${winner.name} получает Реликвию: +${RELIC_VP} ПО в конце игры.`);
+      next.players.forEach((player) => { player.crusade = 0; });
       next.crusadeRound += 1;
       next.crusadePool = next.crusadeRound <= 3 ? next.crusadeLimit : 0;
     }
