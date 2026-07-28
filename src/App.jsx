@@ -61,6 +61,37 @@ function City({ player, active, selectedCard, onPlace, infection }) {
   </section>;
 }
 
+function ScoreChart({ history, players }) {
+  const width = 520;
+  const height = 230;
+  const margin = { top: 12, right: 14, bottom: 34, left: 40 };
+  const allScores = history.flatMap((entry) => entry.scores);
+  const minScore = Math.min(0, ...allScores);
+  const maxScore = Math.max(1, ...allScores);
+  const range = Math.max(1, maxScore - minScore);
+  const plotWidth = width - margin.left - margin.right;
+  const plotHeight = height - margin.top - margin.bottom;
+  const x = (index) => margin.left + (history.length < 2 ? plotWidth / 2 : index / (history.length - 1) * plotWidth);
+  const y = (value) => margin.top + (maxScore - value) / range * plotHeight;
+  const colors = ['#f5cc75', '#68c9c8', '#e97950', '#bc91e4', '#9ec56b', '#ed94be'];
+  const ticks = Array.from({ length: 5 }, (_, index) => minScore + range * index / 4);
+
+  return <div className="score-chart">
+    <div className="chart-legend">{players.map((player, index) => <span key={player.id}><i style={{ background: colors[index] }} />{player.name}</span>)}</div>
+    <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Victory points by turn">
+      {ticks.map((value) => <g key={value}><line x1={margin.left} x2={width - margin.right} y1={y(value)} y2={y(value)} /><text x={margin.left - 8} y={y(value) + 4}>{Math.round(value)}</text></g>)}
+      <line className="chart-axis" x1={margin.left} x2={width - margin.right} y1={height - margin.bottom} y2={height - margin.bottom} />
+      {history.map((_, index) => <text className="chart-turn" key={index} x={x(index)} y={height - 12}>{index}</text>)}
+      {players.map((player, playerIndex) => {
+        const points = history.map((entry, index) => `${x(index)},${y(entry.scores[playerIndex])}`).join(' ');
+        return <g className="chart-series" key={player.id}><polyline points={points} style={{ stroke: colors[playerIndex] }} />{history.map((entry, index) => <circle key={index} cx={x(index)} cy={y(entry.scores[playerIndex])} r="3.5" style={{ fill: colors[playerIndex] }}><title>{`${player.name}, ход ${index}: ${entry.scores[playerIndex]} ПО`}</title></circle>)}</g>;
+      })}
+      <text className="chart-label" x="12" y={height / 2} transform={`rotate(-90 12 ${height / 2})`}>ПО</text>
+      <text className="chart-label" x={width / 2} y={height - 1}>ход</text>
+    </svg>
+  </div>;
+}
+
 export default function App() {
   const [botCount, setBotCount] = useState(3);
   const [game, setGame] = useState(null);
@@ -230,6 +261,6 @@ export default function App() {
       <div className="board"><section className="crossroads"><div className="section-title"><span>Перекрёсток</span><small>выбери одну карту после колоды</small></div><div className="crossroad-cards">{game.crossroads.map((card, index) => <Card card={card} key={card.uid} onClick={() => drawCrossroads(index)} />)}</div></section><section className="cities">{game.players.map((player) => <City key={player.id} player={player} active={player.id === game.current} selectedCard={selected} onPlace={() => place(player.id)} infection={game.infection} />)}</section></div>
       <aside className="side-panel hand-panel"><div className="section-title"><span>Твоя рука</span><small>{game.players[0].hand.length} карт</small></div><div className="hand">{game.players[0].hand.map((card) => <Card card={card} key={card.uid} selected={selected?.uid === card.uid} onClick={() => game.current === 0 && game.phase === 'play' && setSelected(card)} />)}</div><p className="hint">{notice || (selected ? `«${selected.title}» выбрана. Нажми на город.` : 'Твои карты появятся здесь.')}</p></aside>
     </section>
-    {winner && <div className="ending"><div><p className="eyebrow">летописец поставил точку</p><h2>{winner.name} побеждает</h2><strong>{score(winner)} победных очков</strong><div className="scoreboard">{game.players.map((player) => <span key={player.id}><b>{player.name}</b><i>{score(player)} ПО · {player.crusade} ✠ · {player.relics} реликв.</i></span>)}</div><div className="graph"><p>Ход партии</p><div className="graph-bars">{game.players.map((player, playerIndex) => <div className="series" key={player.id}><b>{player.name}</b><div>{game.history.map((entry, index) => <i key={index} title={`${entry.label}: ${entry.scores[playerIndex]} ПО`} style={{ height: `${Math.max(8, Math.min(100, entry.scores[playerIndex] * 10 + 12))}%` }} />)}</div></div>)}</div><small>Высота столбика: победные очки после каждого хода.</small></div><button onClick={() => setGame(freshGame(botCount))}>Ещё один год страданий</button></div></div>}
+    {winner && <div className="ending"><div><p className="eyebrow">летописец поставил точку</p><h2>{winner.name} побеждает</h2><strong>{score(winner)} победных очков</strong><div className="scoreboard">{game.players.map((player) => <span key={player.id}><b>{player.name}</b><i>{score(player)} ПО · {player.crusade} ✠ · {player.relics} реликв.</i></span>)}</div><div className="graph"><p>Победные очки по ходам</p><ScoreChart history={game.history} players={game.players} /></div><button onClick={() => setGame(freshGame(botCount))}>Ещё один год страданий</button></div></div>}
   </main>;
 }
