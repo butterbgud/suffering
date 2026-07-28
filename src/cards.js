@@ -1,5 +1,5 @@
-const resident = (id, title, estate, immunity, vp, copies, effect = '', crusade = 0, artId = id) => ({ id, title, estate, immunity, vp, copies, effect, crusade, epidemic: false, art: `/assets/cards/${artId}.jpg` });
-const disease = (id, title, victims, effect = '') => ({ id, title, victims, copies: 1, effect, epidemic: true, art: `/assets/cards/${id}.jpg` });
+const resident = (id, title, estate, immunity, vp, copies, effect = '', crusade = 0, artId = id) => ({ id, title, estate, immunity, vp, copies, effect, crusade, epidemic: false, art: `/assets/cards/${artId}.webp` });
+const disease = (id, title, victims, effect = '') => ({ id, title, victims, copies: 1, effect, epidemic: true, art: `/assets/cards/${id}.webp` });
 
 export const CARD_LIBRARY = [
   resident('peasant', 'Крестьянин', 'простолюдины', 6, 2, 7, '+1 ПО за каждого другого Крестьянина в городе'),
