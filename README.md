@@ -17,3 +17,5 @@ npm run dev
 - Card art from the original local asset set.
 
 This is a focused prototype, not a full rules-complete adaptation: many character-specific instant effects are still deliberately simplified.
+
+Rules work is tracked in [CARD_ABILITIES.md](CARD_ABILITIES.md). Card quantities are centralized in `src/card-counts.js`.
