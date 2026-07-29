@@ -39,6 +39,8 @@ function score(player) {
     - (card.id === 'merchant' && traders > 1 ? card.vp : 0), 0) + player.relics * RELIC_VP;
 }
 
+const WOMEN = new Set(['lady', 'harlot', 'devka', 'witch']);
+
 function recordHistory(game, label) {
   game.history.push({ label, scores: game.players.map(score), crusade: game.players.map((player) => player.crusade) });
 }
@@ -193,11 +195,22 @@ export default function App() {
 
   function triggerCrusade(next, ownerId, local = false) {
     let sent = 0;
-    next.players.filter((player) => !local || player.id === ownerId).forEach((player) => {
-      const pilgrims = player.city.filter((card) => card.crusade > 0);
+    const departures = next.players.filter((player) => !local || player.id === ownerId).map((player) => {
+      const cityHasWomanOrAdaptable = player.city.some((card) => WOMEN.has(card.id) || card.id === 'adaptable');
+      return { player, pilgrims: player.city.filter((card) => card.crusade > 0 && !(card.id === 'templar' && cityHasWomanOrAdaptable)) };
+    });
+    departures.forEach(({ player, pilgrims }) => {
       if (!pilgrims.length) return;
-      const points = pilgrims.reduce((total, card) => total + card.crusade, 0);
+      const standardBearers = pilgrims.filter((card) => card.id === 'standard_bearer');
+      const points = pilgrims.reduce((total, card) => total + card.crusade, 0) + standardBearers.length * Math.max(0, pilgrims.length - 1);
       player.city = player.city.filter((card) => !pilgrims.includes(card));
+      pilgrims.forEach((card) => {
+        if (card.id === 'deserter') {
+          const destination = next.players[(player.id + 1) % next.players.length];
+          destination.city.push(card);
+          next.log.unshift(`✦ Дезертир вместо сброса появляется в городе ${destination.name}.`);
+        } else next.discard.push(card);
+      });
       if (next.crusadeRound <= 3) {
         player.crusade += points;
         sent += points;
@@ -231,6 +244,16 @@ export default function App() {
     const target = next.players[targetId];
     const owner = next.players[ownerId];
     const activate = (text) => next.log.unshift(`✦ ${card.title}: ${text}`);
+    const mutilator = target.city.find((resident) => resident.id === 'mutilator' && resident.uid !== card.uid);
+    if (WOMEN.has(card.id) && mutilator) {
+      const destination = Array.from({ length: next.players.length - 1 }, (_, step) => next.players[(targetId + step + 1) % next.players.length])
+        .find((player) => !player.city.some((resident) => WOMEN.has(resident.id)));
+      if (destination) {
+        target.city = target.city.filter((resident) => resident.uid !== mutilator.uid);
+        destination.city.push(mutilator);
+        activate(`появляется женщина — Увещеватель уходит в город ${destination.name}.`);
+      } else discardResident(next, target, mutilator, '✦ Увещеватель не находит город без женщины');
+    }
     if (card.id === 'plague_doc') {
       if (next.infection?.host === targetId) {
         next.discard.push(next.infection.card); next.infection = null;
@@ -261,6 +284,15 @@ export default function App() {
       const victim = target.city.filter((resident) => resident.uid !== card.uid && resident.estate === 'дворяне').sort((a, b) => b.vp - a.vp)[0];
       if (victim) discardResident(next, target, victim, '✦ Палач казнит дворянина');
       else activate('не находит дворянина в этом городе.');
+    } else if (card.id === 'priest') {
+      const drawn = next.deck.shift();
+      if (!drawn) activate('колода пуста.');
+      else if (drawn.crusade > 0) {
+        next.discard.push(drawn);
+        target.crusade += drawn.crusade;
+        if (next.crusadeRound <= 3) next.crusadePool = Math.max(0, next.crusadePool - drawn.crusade);
+        activate(`отправляет «${drawn.title}» в Поход за ${drawn.crusade} очк.`);
+      } else { next.discard.push(drawn); activate(`берёт «${drawn.title}» без очков Похода и сбрасывает.`); }
     }
   }
 
@@ -279,8 +311,10 @@ export default function App() {
       next.log.unshift(`${owner.name} сбрасывает «${discardCost.title}», чтобы поселить «${card.title}» в своём городе.`);
     }
     if (card.epidemic) {
-      next.infection = { card, host: targetId, origin: targetId, power: card.victims };
+      const syphilisBoost = card.id === 'syphilis' && target.city.some((resident) => ['harlot', 'devka'].includes(resident.id));
+      next.infection = { card, host: targetId, origin: targetId, power: syphilisBoost ? 2 : card.victims };
       next.log.unshift(`${owner.name} приносит «${card.title}» в город ${target.name}.`);
+      if (syphilisBoost) next.log.unshift('✦ Сифилис начинает с двух жертв: в исходном городе есть Девка или Распутная девка.');
     } else {
       target.city.push(card);
       next.log.unshift(`${owner.name} селит «${card.title}» в городе ${target.name}.`);

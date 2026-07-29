@@ -1,8 +1,8 @@
 # Card Ability Ledger
 
-This table is generated from [`cards.yaml`](cards.yaml) on 2026-07-28. That YAML is the canonical structured source for card text, immunity, VP, crusade points, copies, and ability keys. Verify the art mapping and values first; once confirmed, this becomes the implementation checklist. `-` means the YAML does not specify a value yet.
+This table is the processed implementation catalogue. It combines the original [`cards.yaml`](cards.yaml) with the verified additions below it, and is the checklist for card data and abilities. `-` means the card has no value in that field.
 
-## YAML Catalogue (44 Entries)
+## Processed Catalogue (53 Faces)
 
 | YAML key | Art file | Type | Copies | Immunity | VP | Crusade | Ability key | Description |
 | --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- |
@@ -50,23 +50,19 @@ This table is generated from [`cards.yaml`](cards.yaml) on 2026-07-28. That YAML
 | resident_hare | hare.webp | resident | 1 | 72 | -1 | - | todo_hare | Trades any city resident for a Crossroads resident. |
 | resident_midget | midget.webp | resident_commoner | 1 | 8 | 1 | - | todo_midget | Does not count as a person; follows any resident moved from its city. |
 | resident_virgin | virgin.webp | resident_commoner | 1 | 21 | 1 | 1 | todo_virgin | On crusading, replace with the first male from the deck. |
+| resident_deserter | deserter.webp | resident_nobility | 2 | 51 | 2 | -1 | return_to_city_on_right_after_crusade | When crusading, does not go to discard; appears in the city to the right. |
+| resident_devil | devil.webp | resident_nobility | 1 | 96 | 0 | - | devil_scores_for_negative_vp | Gets +2 VP for each resident with negative VP. |
+| resident_hermit | hermit.webp | resident_clergy | 1 | 13 | 9 | - | hermit_group_scoring_penalty | Loses 1 VP for each other resident in the city. |
+| resident_mutilator | mutilator.webp | resident_nobility | 1 | 28 | 3 | - | move_when_woman_enters_city | If a woman appears in this city, moves to the next city without a woman; otherwise discards. |
+| resident_possesed | possesed.webp | resident_clergy | 2 | 56 | -2 | - | repeat_other_local_instant_ability | Activates another resident's instant ability in this city once more. |
+| resident_priest | priest.webp | resident_clergy | 2 | 86 | 2 | - | draw_and_crusade_or_discard | Draws a deck card: crusader goes immediately on crusade; otherwise discard it. |
+| resident_standard_bearer | standard_bearer.webp | resident_nobility | 2 | 59 | 1 | - | standard_bearer_crusade_bonus | Gets +1 crusade point for each other resident that goes with him. |
+| resident_templar | templar.webp | resident_clergy | 2 | 22 | 1 | 5 | templar_stays_with_woman_or_adaptable | Does not go on crusade if the city contains a woman or Adaptable resident. |
+| epidemic_syphilis | syphilis.webp | epidemic | 1 | - | - | - | epidemic_syphilis | If the starting city has Devka or Harlot, begins killing 2. |
 
-## Art Without YAML Entry
+## Processed Catalogue Coverage
 
-These faces exist in `public/assets/cards` but are not part of the current YAML catalogue. Add their data to `cards.yaml` when ready.
-
-- ``
-- `deserter.webp`2,51,2,-1 resident_nobility| when goes on a crusade, doesnt go to discard, but appears in the city to the right
-- `devil.webp`1,96,0 resident_nobility| gets +2 victory points for each resident with negative VP
-- `hermit.webp`  1,13,9 |resident_clergy| loses 1 point for each other resident in the city
-- `mutilator.webp` 1,28,3 nobility| if woman appears in this city goes to the next city without a woman, if there is no such cities - gets discarded.
-- `possesed.webp` 2,56,-2 -|resident_clergy| instant ability of any other character in this city is activated once more
-- `priest.webp` 2,86,2 |resident_clergy| take a card from the deck, if its a card with crusade points - it instantly goes to a crusade, if not - discard that card.
-
-| resident_standard_bearer| standard_bearer.webp| resident_nobility | 2 | 59 | 1 | - |  | Gets +1 Crusade point for each other resident that went with him |
-
-- `syphilis.webp`| epidemic | 1 | - | - | - | epidemic_syphilis | If starting city has devka or harlot, starts killing 2|
-- `templar.webp` 2,22,1,5 |resident_clergy| doesnt go on a crusade if there is a female or adaptable resident in the city
+All playable card faces are now listed above. The only non-deck faces are `*-start.webp` epidemic-origin tokens and `hg1.webp`–`hg3.webp` relic art.
 
 ## Non-deck Art
 
