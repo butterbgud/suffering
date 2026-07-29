@@ -138,6 +138,11 @@ export default function App() {
 
   function place(targetId) {
     if (!selected || game.phase !== 'play' || current.bot) return;
+    const needsDiscardForOwnCity = ['lord', 'knight'].includes(selected.id) && targetId === game.current;
+    if (needsDiscardForOwnCity && current.hand.filter((card) => card.uid !== selected.uid).length === 0) {
+      say(`«${selected.title}» вторым можно поселить только в чужой город.`);
+      return;
+    }
     update((next) => play(next, next.current, selected, targetId));
     setSelected(null);
   }
@@ -264,7 +269,15 @@ export default function App() {
     const target = next.players[targetId];
     const handIndex = owner.hand.findIndex((item) => item.uid === card.uid);
     if (handIndex < 0) return;
+    const needsDiscardForOwnCity = ['lord', 'knight'].includes(card.id) && targetId === ownerId;
+    const discardCost = needsDiscardForOwnCity && owner.hand.find((item) => item.uid !== card.uid);
+    if (needsDiscardForOwnCity && !discardCost) return;
     owner.hand.splice(handIndex, 1);
+    if (discardCost) {
+      owner.hand = owner.hand.filter((item) => item.uid !== discardCost.uid);
+      next.discard.push(discardCost);
+      next.log.unshift(`${owner.name} сбрасывает «${discardCost.title}», чтобы поселить «${card.title}» в своём городе.`);
+    }
     if (card.epidemic) {
       next.infection = { card, host: targetId, origin: targetId, power: card.victims };
       next.log.unshift(`${owner.name} приносит «${card.title}» в город ${target.name}.`);
@@ -292,9 +305,10 @@ export default function App() {
         const card = bot.hand[0];
         const weakest = [...next.players].sort((a, b) => score(a) - score(b))[0];
         const leaderWithoutPlague = [...next.players].filter((player) => player.id !== bot.id && next.infection?.host !== player.id).sort((a, b) => score(b) - score(a))[0];
+        const isSecondSelfPlay = ['lord', 'knight'].includes(card.id) && bot.hand.filter((item) => item.uid !== card.uid).length === 0;
         const targetId = card.id === 'plague_doc'
           ? (bot.city.some((resident) => resident.id === 'devil') ? bot.id : (leaderWithoutPlague?.id ?? weakest.id))
-          : card.epidemic ? weakest.id : (card.vp < 0 ? weakest.id : bot.id);
+          : isSecondSelfPlay ? weakest.id : card.epidemic ? weakest.id : (card.vp < 0 ? weakest.id : bot.id);
         play(next, bot.id, card, targetId);
       }
     }), 700);
