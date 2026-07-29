@@ -29,7 +29,14 @@ function freshGame(botCount) {
 function score(player) {
   const peasants = player.city.filter((card) => card.id === 'peasant').length;
   const monks = player.city.filter((card) => card.id === 'monk').length;
-  return player.city.reduce((total, card) => total + card.vp + (card.id === 'peasant' ? peasants - 1 : 0) - (card.id === 'monk' ? (monks - 1) * 2 : 0), 0) + player.relics * RELIC_VP;
+  const traders = player.city.filter((card) => card.id === 'merchant').length;
+  const negativeResidents = player.city.filter((card) => card.vp < 0).length;
+  return player.city.reduce((total, card) => total + card.vp
+    + (card.id === 'peasant' ? peasants - 1 : 0)
+    - (card.id === 'monk' ? (monks - 1) * 2 : 0)
+    - (card.id === 'hermit' ? player.city.length - 1 : 0)
+    + (card.id === 'devil' ? negativeResidents * 2 : 0)
+    - (card.id === 'merchant' && traders > 1 ? card.vp : 0), 0) + player.relics * RELIC_VP;
 }
 
 function recordHistory(game, label) {
@@ -179,9 +186,9 @@ export default function App() {
     next.phase = 'draw-deck';
   }
 
-  function triggerCrusade(next, ownerId) {
+  function triggerCrusade(next, ownerId, local = false) {
     let sent = 0;
-    next.players.forEach((player) => {
+    next.players.filter((player) => !local || player.id === ownerId).forEach((player) => {
       const pilgrims = player.city.filter((card) => card.crusade > 0);
       if (!pilgrims.length) return;
       const points = pilgrims.reduce((total, card) => total + card.crusade, 0);
@@ -192,7 +199,7 @@ export default function App() {
       }
     });
     if (next.crusadeRound <= 3) next.crusadePool = Math.max(0, next.crusadePool - sent);
-    next.log.unshift(`${next.players[ownerId].name} созывает Крестовый поход: Святая Земля теряет ${sent} очк.`);
+    next.log.unshift(`${next.players[ownerId].name} созывает ${local ? 'местный' : 'общий'} Крестовый поход: Святая Земля теряет ${sent} очк.`);
     if (next.crusadeRound <= 3 && next.crusadePool === 0) {
       const winner = [...next.players].sort((a, b) => b.crusade - a.crusade || a.relics - b.relics || b.city.filter((card) => card.estate === 'священники').length - a.city.filter((card) => card.estate === 'священники').length || score(a) - score(b))[0];
       winner.relics += 1;
@@ -200,6 +207,55 @@ export default function App() {
       next.players.forEach((player) => { player.crusade = 0; });
       next.crusadeRound += 1;
       next.crusadePool = next.crusadeRound <= 3 ? next.crusadeLimit : 0;
+    }
+  }
+
+  function discardResident(next, player, resident, reason) {
+    player.city = player.city.filter((item) => item.uid !== resident.uid);
+    next.discard.push(resident);
+    next.log.unshift(`${reason}: «${resident.title}» отправляется в сброс.`);
+  }
+
+  function strongestResident(player, exceptUid) {
+    return player.city.filter((resident) => resident.uid !== exceptUid).sort((a, b) => b.vp - a.vp || b.immunity - a.immunity)[0];
+  }
+
+  // Effects that do not need a human choice resolve immediately, and every one
+  // writes a Chronicle entry so it is obvious that the card actually fired.
+  function resolveEntryAbility(next, ownerId, targetId, card) {
+    const target = next.players[targetId];
+    const owner = next.players[ownerId];
+    const activate = (text) => next.log.unshift(`✦ ${card.title}: ${text}`);
+    if (card.id === 'plague_doc') {
+      if (next.infection?.host === targetId) {
+        next.discard.push(next.infection.card); next.infection = null;
+        activate(`лечит эпидемию в городе ${target.name}.`);
+      } else activate(`в городе ${target.name} нет эпидемии — лечение не требуется.`);
+    } else if (card.id === 'inquisitor') {
+      const victim = strongestResident(target, card.uid);
+      if (victim) discardResident(next, target, victim, `✦ Инквизитор ${owner.name} казнит жителя`);
+      else activate('не находит жертву.');
+    } else if (card.id === 'episcop') {
+      activate('созывает общий Крестовый поход.'); triggerCrusade(next, targetId);
+    } else if (card.id === 'preacher') {
+      activate('созывает местный Крестовый поход.'); triggerCrusade(next, targetId, true);
+    } else if (card.id === 'baby') {
+      const victim = target.city.find((resident) => resident.uid !== card.uid && ['lady', 'harlot', 'devka'].includes(resident.id));
+      if (victim) discardResident(next, target, victim, '✦ Младенец изгоняет женщину');
+      else activate('не находит Леди или Девки в городе.');
+    } else if (card.id === 'crossbowman') {
+      const victim = next.crossroads.sort((a, b) => b.vp - a.vp)[0];
+      if (victim) { next.crossroads = next.crossroads.filter((item) => item.uid !== victim.uid); next.discard.push(victim); activate(`сбрасывает «${victim.title}» с Перекрёстка.`); }
+      else activate('не находит персонажей на Перекрёстке.');
+    } else if (card.id === 'bandit') {
+      const enemy = next.players.filter((player) => player.id !== targetId).sort((a, b) => score(b) - score(a))[0];
+      const victim = enemy?.city.filter((resident) => resident.estate === 'дворяне').sort((a, b) => b.vp - a.vp)[0];
+      if (victim) discardResident(next, enemy, victim, `✦ Разбойник убивает дворянина в городе ${enemy.name}`);
+      else activate('не находит дворянина в другом городе.');
+    } else if (card.id === 'executioner') {
+      const victim = target.city.filter((resident) => resident.uid !== card.uid && resident.estate === 'дворяне').sort((a, b) => b.vp - a.vp)[0];
+      if (victim) discardResident(next, target, victim, '✦ Палач казнит дворянина');
+      else activate('не находит дворянина в этом городе.');
     }
   }
 
@@ -215,16 +271,7 @@ export default function App() {
     } else {
       target.city.push(card);
       next.log.unshift(`${owner.name} селит «${card.title}» в городе ${target.name}.`);
-      if (card.id === 'plague_doc' && next.infection?.host === targetId) {
-        next.discard.push(next.infection.card); next.infection = null;
-        next.log.unshift('Чумной доктор победил болезнь. На этот раз.');
-      }
-      if (card.id === 'inquisitor' && target.city.length > 1) {
-        const victim = target.city.filter((resident) => resident.uid !== card.uid).sort((a, b) => a.immunity - b.immunity)[0];
-        target.city.splice(target.city.findIndex((resident) => resident.uid === victim.uid), 1); next.discard.push(victim);
-        next.log.unshift(`Инквизитор сжёг «${victim.title}».`);
-      }
-      if (card.id === 'episcop' || card.id === 'preacher') triggerCrusade(next, targetId);
+      resolveEntryAbility(next, ownerId, targetId, card);
     }
     if (!owner.hand.length) endTurn(next);
   }
@@ -244,7 +291,10 @@ export default function App() {
       } else if (next.phase === 'play') {
         const card = bot.hand[0];
         const weakest = [...next.players].sort((a, b) => score(a) - score(b))[0];
-        const targetId = card.epidemic ? weakest.id : (card.vp < 0 ? weakest.id : bot.id);
+        const leaderWithoutPlague = [...next.players].filter((player) => player.id !== bot.id && next.infection?.host !== player.id).sort((a, b) => score(b) - score(a))[0];
+        const targetId = card.id === 'plague_doc'
+          ? (bot.city.some((resident) => resident.id === 'devil') ? bot.id : (leaderWithoutPlague?.id ?? weakest.id))
+          : card.epidemic ? weakest.id : (card.vp < 0 ? weakest.id : bot.id);
         play(next, bot.id, card, targetId);
       }
     }), 700);
@@ -257,9 +307,9 @@ export default function App() {
   return <main className="game-shell">
     <header><div><p className="eyebrow">сезон чумы · год господень 1248</p><h1>Страдания</h1></div><div className="turn"><span>Ход</span><strong>{current.name}</strong><small>{game.phase === 'draw-deck' ? 'взять из колоды' : game.phase === 'draw-crossroads' ? 'выбрать перекрёсток' : game.phase === 'play' ? 'разыграть карты' : 'конец'}</small></div><div className="crusade-meter"><span>Святая земля · поход {Math.min(game.crusadeRound, 3)}/3</span><strong>{game.crusadeRound <= 3 ? game.crusadePool : 'захвачена'} {game.crusadeRound <= 3 && <small>/ {game.crusadeLimit}</small>}</strong><i style={{ width: `${game.crusadeRound <= 3 ? (game.crusadePool / game.crusadeLimit) * 100 : 0}%` }} /></div><button className="restart" onClick={() => setGame(null)}>Новая партия</button></header>
     <section className="table">
-      <aside className="side-panel"><div className="deck-zone"><Card faceDown onClick={drawDeck} /><b>{game.deck.length}</b><span>колода</span></div><div className="chronicle"><p>Хроника</p>{game.log.slice(0, 6).map((line, index) => <small key={`${line}-${index}`}>{line}</small>)}</div></aside>
+      <aside className="side-panel"><div className="deck-zone"><Card faceDown onClick={drawDeck} /><b>{game.deck.length}</b><span>колода</span></div><div className="chronicle"><p>Хроника <i>{game.log.length}</i></p>{game.log.map((line, index) => <small key={`${line}-${index}`}>{line}</small>)}</div></aside>
       <div className="board"><section className="crossroads"><div className="section-title"><span>Перекрёсток</span><small>выбери одну карту после колоды</small></div><div className="crossroad-cards">{game.crossroads.map((card, index) => <Card card={card} key={card.uid} onClick={() => drawCrossroads(index)} />)}</div></section><section className="cities">{game.players.map((player) => <City key={player.id} player={player} active={player.id === game.current} selectedCard={selected} onPlace={() => place(player.id)} infection={game.infection} />)}</section></div>
-      <aside className="side-panel hand-panel"><div className="section-title"><span>Твоя рука</span><small>{game.players[0].hand.length} карт</small></div><div className="hand">{game.players[0].hand.map((card) => <Card card={card} key={card.uid} selected={selected?.uid === card.uid} onClick={() => game.current === 0 && game.phase === 'play' && setSelected(card)} />)}</div><p className="hint">{notice || (selected ? `«${selected.title}» выбрана. Нажми на город.` : 'Твои карты появятся здесь.')}</p></aside>
+      <aside className="side-panel hand-panel"><div className="section-title"><span>Твоя рука</span><small>{game.players[0].hand.length} карт</small></div><div className="hand">{game.players[0].hand.map((card) => <Card card={card} key={card.uid} selected={selected?.uid === card.uid} onClick={() => game.current === 0 && game.phase === 'play' && setSelected(card)} />)}</div><p className="hint">{notice || (selected ? `«${selected.title}»: ${selected.effect} Нажми на город — мгновенный эффект будет отмечен в Хронике.` : 'Твои карты появятся здесь.')}</p></aside>
     </section>
     {winner && <div className="ending"><div><p className="eyebrow">летописец поставил точку</p><h2>{winner.name} побеждает</h2><strong>{score(winner)} победных очков</strong><div className="scoreboard">{game.players.map((player) => <span key={player.id}><b>{player.name}</b><i>{score(player)} ПО · {player.crusade} ✠ · {player.relics} реликв.</i></span>)}</div><div className="graph"><p>Победные очки по ходам</p><ScoreChart history={game.history} players={game.players} /></div><button onClick={() => setGame(freshGame(botCount))}>Ещё один год страданий</button></div></div>}
   </main>;
