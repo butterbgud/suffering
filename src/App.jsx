@@ -260,8 +260,10 @@ export default function App() {
         activate(`лечит эпидемию в городе ${target.name}.`);
       } else activate(`в городе ${target.name} нет эпидемии — лечение не требуется.`);
     } else if (card.id === 'inquisitor') {
-      const victim = strongestResident(target, card.uid);
-      if (victim) discardResident(next, target, victim, `✦ Инквизитор ${owner.name} казнит жителя`);
+      const botBurden = owner.bot && owner.city.filter((resident) => resident.uid !== card.uid && resident.vp < 0).sort((a, b) => a.vp - b.vp)[0];
+      const victim = botBurden ?? strongestResident(target, card.uid);
+      const victimCity = botBurden ? owner : target;
+      if (victim) discardResident(next, victimCity, victim, `✦ Инквизитор ${owner.name} казнит жителя`);
       else activate('не находит жертву.');
     } else if (card.id === 'episcop') {
       activate('созывает общий Крестовый поход.'); triggerCrusade(next, targetId);
