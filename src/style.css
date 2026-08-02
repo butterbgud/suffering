@@ -55,5 +55,14 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .relic-card img { position: absolute; top: 50%; left: 50%; width: 54px; height: 88px; object-fit: fill; transform: translate(-50%, -50%) rotate(90deg); }
 .plague-preview { position: absolute; z-index: 20; top: 34px; left: 8px; width: 116px; padding: 5px; display: grid; gap: 4px; color: #f7dfae; border: 1px solid #d69a4b; background: #25140cf5; box-shadow: 0 8px 25px #000d; text-align: center; pointer-events: none; }
 .plague-preview img { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; }.plague-preview b { font-size: 12px; }.plague-preview small { color: #d2b887; font-size: 11px; line-height: 1.05; }
+.cities { grid-template-columns: repeat(var(--player-count, 4), minmax(0, 1fr)); gap: 16px; }
+.city { min-height: 0; border: 0; background: transparent; box-shadow: none; }
+.city.active { border: 0; box-shadow: none; }
+.city-head { display: block; padding: 7px 4px 10px; color: #f1d49d; border: 0; background: transparent; text-align: center; font-weight: 700; }
+.city-head span { display: block; color: #f1d49d; font-size: clamp(14px, 1.4vw, 21px); text-shadow: 1px 2px #542b16; }
+.city-head b, .city-head i { display: none; }
+.city .lanes { padding-top: 4px; }
+@media (max-width: 980px) { .cities { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 570px) { .cities { grid-template-columns: 1fr; } }
 @keyframes draw-pulse { 50% { box-shadow: 0 0 0 4px #f3ca7733, 0 0 34px #e3a851, 3px 5px 10px #000a; } }
 @keyframes draw-pulse-text { 50% { text-shadow: 0 0 18px #f3ca77; } }
