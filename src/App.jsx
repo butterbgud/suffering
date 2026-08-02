@@ -6,11 +6,12 @@ const BUILD_VERSION = __BUILD_VERSION__;
 const NAMES = ['Конста', 'Гертруда', 'Ульрих', 'Ингеборга', 'Тибальт', 'Матильда'];
 const BOT_NAMES = ['Гертруда', 'Ульрих', 'Ингеборга', 'Тибальт', 'Матильда'];
 const CRUSADE_POOL = { 2: 16, 3: 16, 4: 20, 5: 23, 6: 25 };
-const RELIC_VP = 6;
+const RELIC_VP = 7;
+const RELIC_CARDS = ['hg1', 'hg2', 'hg3'];
 
 function freshGame(botCount) {
   const deck = shuffle(buildDeck());
-  const players = Array.from({ length: botCount + 1 }, (_, id) => ({ id, name: id ? BOT_NAMES[id - 1] : NAMES[0], bot: id > 0, city: [], hand: [], crusade: 0, relics: 0 }));
+  const players = Array.from({ length: botCount + 1 }, (_, id) => ({ id, name: id ? BOT_NAMES[id - 1] : NAMES[0], bot: id > 0, city: [], hand: [], crusade: 0, relics: [] }));
   return {
     deck: deck.slice(3),
     crossroads: deck.slice(0, 3),
@@ -19,6 +20,7 @@ function freshGame(botCount) {
     phase: 'draw-deck',
     infection: null,
     discard: [],
+    relicDeck: shuffle([...RELIC_CARDS]),
     crusadePool: CRUSADE_POOL[players.length],
     crusadeLimit: CRUSADE_POOL[players.length],
     crusadeRound: 1,
@@ -38,7 +40,7 @@ function score(player) {
     - (card.id === 'monk' ? (monks - 1) * 2 : 0)
     - (card.id === 'hermit' ? player.city.length - 1 : 0)
     + (card.id === 'devil' ? negativeResidents * 2 : 0)
-    - (card.id === 'merchant' && traders > 1 ? card.vp : 0), 0) + player.relics * RELIC_VP;
+    - (card.id === 'merchant' && traders > 1 ? card.vp : 0), 0) + player.relics.length * RELIC_VP;
 }
 
 const WOMEN = new Set(['lady', 'harlot', 'devka', 'witch']);
@@ -60,7 +62,7 @@ function City({ player, active, selectedCard, onPlace, infection }) {
     <button className="city-head" onClick={onPlace} disabled={!selectedCard}>
       <span>{player.name}</span><b>{score(player)} ПО</b><i>{player.crusade} ✠</i>
     </button>
-    {player.relics > 0 && <div className="relics">{Array.from({ length: player.relics }, (_, index) => <div className="relic-card" key={index} title={`Реликвия: +${RELIC_VP} победных очков`}><span>✠</span><b>Реликвия</b><i>+{RELIC_VP} ПО</i></div>)}</div>}
+    {player.relics.length > 0 && <div className="relics">{player.relics.map((relicId) => <div className="relic-card" key={relicId} title={`Реликвия: +${RELIC_VP} победных очков`}><img src={`/assets/cards/${relicId}.webp`} alt={`Реликвия +${RELIC_VP} ПО`} /></div>)}</div>}
     {infection?.host === player.id && <div className="infection"><span>☠</span><strong>{infection.card.title}</strong><em>{infection.power} жертв.</em></div>}
     <div className="lanes">
       {estates.map((estate) => <div className="lane" key={estate}>
@@ -238,8 +240,8 @@ export default function App() {
     if (next.crusadeRound <= 3) next.crusadePool = Math.max(0, next.crusadePool - sent);
     next.log.unshift(`${next.players[ownerId].name} созывает ${local ? 'местный' : 'общий'} Крестовый поход: Святая Земля теряет ${sent} очк.`);
     if (next.crusadeRound <= 3 && next.crusadePool === 0) {
-      const winner = [...next.players].sort((a, b) => b.crusade - a.crusade || a.relics - b.relics || b.city.filter((card) => card.estate === 'священники').length - a.city.filter((card) => card.estate === 'священники').length || score(a) - score(b))[0];
-      winner.relics += 1;
+      const winner = [...next.players].sort((a, b) => b.crusade - a.crusade || a.relics.length - b.relics.length || b.city.filter((card) => card.estate === 'священники').length - a.city.filter((card) => card.estate === 'священники').length || score(a) - score(b))[0];
+      winner.relics.push(next.relicDeck.shift() || RELIC_CARDS[(next.crusadeRound - 1) % RELIC_CARDS.length]);
       next.log.unshift(`${winner.name} получает Реликвию: +${RELIC_VP} ПО в конце игры.`);
       next.players.forEach((player) => { player.crusade = 0; });
       next.crusadeRound += 1;
@@ -380,7 +382,7 @@ export default function App() {
       <div className="board"><section className={`crossroads ${game.phase === 'draw-crossroads' ? 'ready' : ''}`}><div className="section-title"><span>Перекрёсток</span><small>выбери одну карту после колоды</small></div><div className="crossroad-cards">{game.crossroads.map((card, index) => <Card card={card} key={card.uid} onClick={() => drawCrossroads(index)} />)}</div></section><section className="cities">{game.players.map((player) => <City key={player.id} player={player} active={player.id === game.current} selectedCard={selected} onPlace={() => place(player.id)} infection={game.infection} />)}</section></div>
       <aside className="side-panel hand-panel"><div className="section-title"><span>Твоя рука</span><small>{game.players[0].hand.length} карт</small></div><div className="hand">{game.players[0].hand.map((card) => <Card card={card} key={card.uid} selected={selected?.uid === card.uid} onClick={() => game.current === 0 && game.phase === 'play' && setSelected(card)} />)}</div><p className="hint">{notice || (selected ? `«${selected.title}»: ${selected.effect} Нажми на город — мгновенный эффект будет отмечен в Хронике.` : 'Твои карты появятся здесь.')}</p></aside>
     </section>
-    {winner && <div className="ending"><div><p className="eyebrow">летописец поставил точку</p><h2>{winner.name} побеждает</h2><strong>{score(winner)} победных очков</strong><div className="scoreboard">{game.players.map((player) => <span key={player.id}><b>{player.name}</b><i>{score(player)} ПО · {player.crusade} ✠ · {player.relics} реликв.</i></span>)}</div><div className="graph"><p>Победные очки по ходам</p><ScoreChart history={game.history} players={game.players} /></div><button onClick={() => setGame(freshGame(botCount))}>Ещё один год страданий</button></div></div>}
+    {winner && <div className="ending"><div><p className="eyebrow">летописец поставил точку</p><h2>{winner.name} побеждает</h2><strong>{score(winner)} победных очков</strong><div className="scoreboard">{game.players.map((player) => <span key={player.id}><b>{player.name}</b><i>{score(player)} ПО · {player.crusade} ✠ · {player.relics.length} реликв.</i></span>)}</div><div className="graph"><p>Победные очки по ходам</p><ScoreChart history={game.history} players={game.players} /></div><button onClick={() => setGame(freshGame(botCount))}>Ещё один год страданий</button></div></div>}
     {bugOpen && <div className="bug-modal" onClick={() => bugStatus !== 'sending' && setBugOpen(false)}><form onSubmit={(event) => { event.preventDefault(); submitBug(); }} onClick={(event) => event.stopPropagation()}><h2>Сообщить об ошибке</h2><p>К отчёту будет приложена последняя хроника партии.</p><textarea autoFocus value={bugText} onChange={(event) => setBugText(event.target.value)} placeholder="Что произошло? (необязательно)" maxLength="1200" />{bugStatus === 'sent' ? <strong className="bug-success">Отчёт отправлен. Спасибо!</strong> : bugStatus === 'failed' ? <strong className="bug-failed">Не удалось отправить отчёт.</strong> : null}<div><button type="button" onClick={() => setBugOpen(false)} disabled={bugStatus === 'sending'}>Отмена</button><button className="start" type="submit" disabled={bugStatus === 'sending'}>Отправить</button></div></form></div>}
   </main>;
 }

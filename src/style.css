@@ -51,5 +51,7 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .crossroads .section-title { justify-content: center; flex-direction: column; align-items: center; text-align: center; }
 .crossroads.ready .section-title span { color: #f3ca77; text-shadow: 0 0 10px #e3a851; animation: draw-pulse-text 1.5s ease-in-out infinite; }
 .crossroads.ready .section-title small { color: #f3ca77; font-size: 16px; font-weight: 700; text-shadow: 0 0 10px #e3a851; animation: draw-pulse-text 1.5s ease-in-out infinite; }
+.relic-card { position: relative; width: 88px; height: 54px; margin-left: -19px; display: grid; place-items: center; overflow: hidden; padding: 0; color: #4b2109; border: 1px solid #e8c57c; background: #c99642; box-shadow: 2px 3px 8px #000a; }
+.relic-card img { position: absolute; top: 50%; left: 50%; width: 54px; height: 88px; object-fit: fill; transform: translate(-50%, -50%) rotate(90deg); }
 @keyframes draw-pulse { 50% { box-shadow: 0 0 0 4px #f3ca7733, 0 0 34px #e3a851, 3px 5px 10px #000a; } }
 @keyframes draw-pulse-text { 50% { text-shadow: 0 0 18px #f3ca77; } }
