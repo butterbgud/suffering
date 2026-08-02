@@ -56,12 +56,3 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .city .residents { justify-content: center; width: 100%; }
 @media (max-width: 980px) { .city { height: calc(100px * 1.5 * 3.5); } }
 @media (max-width: 570px) { .city { height: calc(57px * 1.5 * 3.5); } }
-.city { height: auto; min-height: 275px; overflow: visible; }
-.city .lanes { position: static; display: block; padding: 8px 11px 12px; }
-.city .lane { display: grid; grid-template-columns: 79px 1fr; min-height: 72px; }
-.city .lane label { display: block; }
-.city .residents { display: grid; grid-template-columns: 1fr 1fr; align-items: center; }
-.resident-side { min-width: 0; display: flex; align-items: center; }
-.resident-side.left { justify-content: flex-end; }
-.resident-side.right { justify-content: flex-start; }
-.resident-side .card { margin-right: -30px; }
