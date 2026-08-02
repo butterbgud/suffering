@@ -517,12 +517,14 @@ export default function App() {
         if (next.forcedPlay && next.forcedPlay.playerId !== bot.id) return;
         const forcedCard = next.forcedPlay?.playerId === bot.id && bot.hand.find((item) => next.forcedPlay.cardIds.includes(item.uid));
         const card = forcedCard || bot.hand[0];
-        const weakest = [...next.players].sort((a, b) => score(a) - score(b))[0];
+        const highestScoringOpponent = [...next.players].filter((player) => player.id !== bot.id).sort((a, b) => score(b) - score(a))[0];
+        const victoryLeader = [...next.players].sort((a, b) => score(b) - score(a))[0];
+        const targetLeader = victoryLeader.id === bot.id ? highestScoringOpponent : victoryLeader;
         const leaderWithoutPlague = [...next.players].filter((player) => player.id !== bot.id && next.infection?.host !== player.id).sort((a, b) => score(b) - score(a))[0];
         const isSecondSelfPlay = ['lord', 'knight'].includes(card.id) && bot.hand.filter((item) => item.uid !== card.uid).length === 0;
         const targetId = card.id === 'plague_doc'
-          ? (bot.city.some((resident) => resident.id === 'devil') ? bot.id : (leaderWithoutPlague?.id ?? weakest.id))
-          : isSecondSelfPlay ? weakest.id : card.epidemic ? weakest.id : (card.vp < 0 ? weakest.id : bot.id);
+          ? (bot.city.some((resident) => resident.id === 'devil') ? bot.id : (leaderWithoutPlague?.id ?? targetLeader.id))
+          : isSecondSelfPlay ? targetLeader.id : card.epidemic ? (leaderWithoutPlague?.id ?? targetLeader.id) : (card.vp < 0 ? targetLeader.id : bot.id);
         play(next, bot.id, card, targetId);
       }
     }), 700);
