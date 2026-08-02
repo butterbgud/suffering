@@ -45,6 +45,7 @@ function score(player) {
 }
 
 const WOMEN = new Set(['lady', 'harlot', 'devka', 'witch']);
+const epidemicPriority = (card) => ({ cholera: 'сначала простолюдины', leprosy: 'сначала священники', malaria: 'сначала дворяне', black_pox: 'сначала высокий иммунитет', bubonic_plague: 'сначала по 2 жертвы', syphilis: 'усиленная эпидемия' }[card.id] || 'обычный порядок');
 
 function recordHistory(game, label) {
   game.history.push({ label, scores: game.players.map(score), crusade: game.players.map((player) => player.crusade) });
@@ -57,14 +58,14 @@ function Card({ card, small = false, onClick, selected, faceDown = false }) {
   </button>;
 }
 
-function City({ player, active, selectedCard, onPlace, infection }) {
+function City({ player, active, selectedCard, onPlace, infection, plaguePreview, setPlaguePreview }) {
   const estates = ['дворяне', 'священники', 'простолюдины'];
   return <section className={`city ${active ? 'active' : ''}`}>
     <button className="city-head" onClick={onPlace} disabled={!selectedCard}>
       <span>{player.name}</span><b>{score(player)} ПО</b><i>{player.crusade} ✠</i>
     </button>
     {player.relics.length > 0 && <div className="relics">{player.relics.map((relicId) => <div className="relic-card" key={relicId} title={`Реликвия: +${RELIC_VP} победных очков`}><img src={`/assets/cards/${relicId}.webp`} alt={`Реликвия +${RELIC_VP} ПО`} /></div>)}</div>}
-    {infection?.host === player.id && <div className="infection"><span>☠</span><strong>{infection.card.title}</strong><em>{infection.power} жертв.</em></div>}
+    {infection?.host === player.id && <div className="infection" onMouseEnter={() => setPlaguePreview(true)} onMouseLeave={() => setPlaguePreview(false)} onClick={() => setPlaguePreview((open) => !open)} title="Нажмите или наведите для просмотра карты эпидемии"><span>☠</span><strong>{infection.card.title}</strong><em>{infection.power} жертв. · {epidemicPriority(infection.card)}</em>{plaguePreview && <div className="plague-preview"><img src={infection.card.art} alt={infection.card.title} /><b>{infection.card.title}</b><small>{infection.card.effect}</small></div>}</div>}
     <div className="lanes">
       {estates.map((estate) => <div className="lane" key={estate}>
         <label>{estate}</label>
@@ -114,6 +115,7 @@ export default function App() {
   const [bugOpen, setBugOpen] = useState(false);
   const [bugText, setBugText] = useState('');
   const [bugStatus, setBugStatus] = useState('');
+  const [plaguePreview, setPlaguePreview] = useState(false);
 
   const current = game?.players[game.current];
   const update = (mutate) => setGame((previous) => {
@@ -534,7 +536,7 @@ export default function App() {
     <header><div className="brand"><p className="eyebrow">сезон чумы · год господень 1248</p><small className="build-version">#{BUILD_VERSION}</small><div className="header-actions"><button className="log-toggle" title="Показать/скрыть хронику" aria-label="Показать/скрыть хронику" onClick={() => setLogOpen((open) => !open)}>{logOpen ? 'Л' : 'Л'}</button><button className="report-button" title="Сообщить об ошибке" aria-label="Сообщить об ошибке" onClick={() => { setBugStatus(''); setBugOpen(true); }}><img src="/assets/report-bug.jpg" alt="" /></button></div></div><div className="crusade-meter"><span>Святая земля · поход {Math.min(game.crusadeRound, 3)}/3</span><strong>{game.crusadeRound <= 3 ? game.crusadePool : 'захвачена'} {game.crusadeRound <= 3 && <small>/ {game.crusadeLimit}</small>}</strong><i style={{ width: `${game.crusadeRound <= 3 ? (game.crusadePool / game.crusadeLimit) * 100 : 0}%` }} /></div></header>
     <section className="table">
       <aside className="side-panel"><div className={`deck-zone ${game.phase === 'draw-deck' ? 'ready' : ''}`}><Card faceDown onClick={drawDeck} /><b>{game.deck.length}</b><span>колода</span><small>Возьми карту</small></div>{logOpen && <div className="chronicle"><p>Хроника <i>{game.log.length}</i></p>{game.log.map((line, index) => <small key={`${line}-${index}`}>{line}</small>)}</div>}</aside>
-      <div className="board"><section className={`crossroads ${game.phase === 'draw-crossroads' ? 'ready' : ''}`}><div className="section-title"><span>Перекрёсток</span><small>выбери одну карту после колоды</small></div><div className="crossroad-cards">{game.crossroads.map((card, index) => <Card card={card} key={card.uid} onClick={() => drawCrossroads(index)} />)}</div></section><section className="cities">{game.players.map((player) => <City key={player.id} player={player} active={player.id === game.current} selectedCard={selected} onPlace={() => place(player.id)} infection={game.infection} />)}</section></div>
+      <div className="board"><section className={`crossroads ${game.phase === 'draw-crossroads' ? 'ready' : ''}`}><div className="section-title"><span>Перекрёсток</span><small>выбери одну карту после колоды</small></div><div className="crossroad-cards">{game.crossroads.map((card, index) => <Card card={card} key={card.uid} onClick={() => drawCrossroads(index)} />)}</div></section><section className="cities">{game.players.map((player) => <City key={player.id} player={player} active={player.id === game.current} selectedCard={selected} onPlace={() => place(player.id)} infection={game.infection} plaguePreview={plaguePreview} setPlaguePreview={setPlaguePreview} />)}</section></div>
       <aside className="side-panel hand-panel"><div className="section-title"><span>Твоя рука</span><small>{game.players[0].hand.length} карт</small></div><div className="hand">{game.players[0].hand.map((card) => <Card card={card} key={card.uid} selected={selected?.uid === card.uid} onClick={() => game.current === 0 && game.phase === 'play' && setSelected(card)} />)}</div><p className="hint">{notice || (game.forcedPlay?.playerId === 0 ? `Ведьма заставляет разыграть ещё ${game.forcedPlay.cardIds.length} карты немедленно.` : selected ? `«${selected.title}»: ${selected.effect} Нажми на город — мгновенный эффект будет отмечен в Хронике.` : 'Твои карты появятся здесь.')}</p></aside>
     </section>
     {winner && <div className="ending"><div><p className="eyebrow">летописец поставил точку</p><h2>{winner.name} побеждает</h2><strong>{score(winner)} победных очков</strong><div className="scoreboard">{game.players.map((player) => <span key={player.id}><b>{player.name}</b><i>{score(player)} ПО · {player.crusade} ✠ · {player.relics.length} реликв.</i></span>)}</div><div className="graph"><p>Победные очки по ходам</p><ScoreChart history={game.history} players={game.players} /></div><button onClick={() => setGame(freshGame(botCount))}>Ещё один год страданий</button></div></div>}
