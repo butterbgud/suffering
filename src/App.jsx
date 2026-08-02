@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { buildDeck, shuffle } from './cards.js';
 
+const BUILD_VERSION = __BUILD_VERSION__;
+
 const NAMES = ['Конста', 'Гертруда', 'Ульрих', 'Ингеборга', 'Тибальт', 'Матильда'];
 const BOT_NAMES = ['Гертруда', 'Ульрих', 'Ингеборга', 'Тибальт', 'Матильда'];
 const CRUSADE_POOL = { 2: 16, 3: 16, 4: 20, 5: 23, 6: 25 };
@@ -49,7 +51,6 @@ function Card({ card, small = false, onClick, selected, faceDown = false }) {
   if (faceDown) return <button className={`card back ${small ? 'small' : ''}`} onClick={onClick} aria-label="Взять карту" />;
   return <button className={`card ${small ? 'small' : ''} ${selected ? 'selected' : ''} ${card.epidemic ? 'epidemic' : ''}`} onClick={onClick} title={`${card.title}: ${card.effect}`}>
     <img src={card.art} alt={card.title} />
-    <span className="card-caption">{card.title}</span>
   </button>;
 }
 
@@ -106,6 +107,10 @@ export default function App() {
   const [game, setGame] = useState(null);
   const [selected, setSelected] = useState(null);
   const [notice, setNotice] = useState('');
+  const [logOpen, setLogOpen] = useState(false);
+  const [bugOpen, setBugOpen] = useState(false);
+  const [bugText, setBugText] = useState('');
+  const [bugStatus, setBugStatus] = useState('');
 
   const current = game?.players[game.current];
   const update = (mutate) => setGame((previous) => {
@@ -114,6 +119,17 @@ export default function App() {
     return next;
   });
   const say = (text) => setNotice(text);
+
+  async function submitBug() {
+    setBugStatus('sending');
+    try {
+      const response = await fetch('/api/bugreport', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: bugText, version: BUILD_VERSION, project: 'suffering-reborn', history: game?.log?.slice(-30) || [] }) });
+      if (!response.ok) throw new Error('Bug report request failed');
+      setBugStatus('sent');
+    } catch {
+      setBugStatus('failed');
+    }
+  }
 
   function drawDeck() {
     if (game.phase !== 'draw-deck' || current.bot) return;
@@ -351,16 +367,17 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [game, current?.bot, current?.id]);
 
-  if (!game) return <main className="welcome"><div className="welcome-card"><p className="eyebrow">A tabletop game, rebuilt from the ashes</p><h1>Страдания</h1><p className="lede">Средневековое градостроительство, если бы человеческая жизнь стоила примерно пол-карты.</p><div className="bot-picker"><span>Соперники</span>{[1, 2, 3, 4, 5].map((count) => <button key={count} className={botCount === count ? 'picked' : ''} onClick={() => setBotCount(count)}>{count}</button>)}</div><button className="start" onClick={() => setGame(freshGame(botCount))}>Основать город <span>→</span></button><p className="rules">Каждый ход: колода → перекрёсток → разыграть всё. Эпидемии ходят по городам и становятся злее, когда возвращаются домой.</p></div></main>;
+  if (!game) return <main className="welcome"><div className="welcome-card"><p className="eyebrow">A tabletop game, rebuilt from the ashes</p><p className="lede">Средневековое градостроительство, если бы человеческая жизнь стоила примерно пол-карты.</p><div className="bot-picker"><span>Соперники</span>{[1, 2, 3, 4, 5].map((count) => <button key={count} className={botCount === count ? 'picked' : ''} onClick={() => setBotCount(count)}>{count}</button>)}</div><button className="start" onClick={() => setGame(freshGame(botCount))}>Основать город <span>→</span></button><p className="rules">Каждый ход: колода → перекрёсток → разыграть всё. Эпидемии ходят по городам и становятся злее, когда возвращаются домой.</p><small className="build-version">#{BUILD_VERSION}</small></div></main>;
 
   const winner = game.ended ? [...game.players].sort((a, b) => score(b) - score(a))[0] : null;
   return <main className="game-shell">
-    <header><div><p className="eyebrow">сезон чумы · год господень 1248</p><h1>Страдания</h1></div><div className="turn"><span>Ход</span><strong>{current.name}</strong><small>{game.phase === 'draw-deck' ? 'взять из колоды' : game.phase === 'draw-crossroads' ? 'выбрать перекрёсток' : game.phase === 'play' ? 'разыграть карты' : 'конец'}</small></div><div className="crusade-meter"><span>Святая земля · поход {Math.min(game.crusadeRound, 3)}/3</span><strong>{game.crusadeRound <= 3 ? game.crusadePool : 'захвачена'} {game.crusadeRound <= 3 && <small>/ {game.crusadeLimit}</small>}</strong><i style={{ width: `${game.crusadeRound <= 3 ? (game.crusadePool / game.crusadeLimit) * 100 : 0}%` }} /></div><button className="restart" onClick={() => setGame(null)}>Новая партия</button></header>
+    <header><div className="brand"><p className="eyebrow">сезон чумы · год господень 1248</p><small className="build-version">#{BUILD_VERSION}</small><div className="header-actions"><button className="log-toggle" title="Показать/скрыть хронику" aria-label="Показать/скрыть хронику" onClick={() => setLogOpen((open) => !open)}>{logOpen ? 'Л' : 'Л'}</button><button className="report-button" title="Сообщить об ошибке" aria-label="Сообщить об ошибке" onClick={() => { setBugStatus(''); setBugOpen(true); }}><img src="/assets/report-bug.jpg" alt="" /></button></div></div><div className="turn"><span>Ход</span><strong>{current.name}</strong><small>{game.phase === 'draw-deck' ? 'взять из колоды' : game.phase === 'draw-crossroads' ? 'выбрать перекрёсток' : game.phase === 'play' ? 'разыграть карты' : 'конец'}</small></div><div className="crusade-meter"><span>Святая земля · поход {Math.min(game.crusadeRound, 3)}/3</span><strong>{game.crusadeRound <= 3 ? game.crusadePool : 'захвачена'} {game.crusadeRound <= 3 && <small>/ {game.crusadeLimit}</small>}</strong><i style={{ width: `${game.crusadeRound <= 3 ? (game.crusadePool / game.crusadeLimit) * 100 : 0}%` }} /></div></header>
     <section className="table">
-      <aside className="side-panel"><div className="deck-zone"><Card faceDown onClick={drawDeck} /><b>{game.deck.length}</b><span>колода</span></div><div className="chronicle"><p>Хроника <i>{game.log.length}</i></p>{game.log.map((line, index) => <small key={`${line}-${index}`}>{line}</small>)}</div></aside>
+      <aside className="side-panel"><div className="deck-zone"><Card faceDown onClick={drawDeck} /><b>{game.deck.length}</b><span>колода</span></div>{logOpen && <div className="chronicle"><p>Хроника <i>{game.log.length}</i></p>{game.log.map((line, index) => <small key={`${line}-${index}`}>{line}</small>)}</div>}</aside>
       <div className="board"><section className="crossroads"><div className="section-title"><span>Перекрёсток</span><small>выбери одну карту после колоды</small></div><div className="crossroad-cards">{game.crossroads.map((card, index) => <Card card={card} key={card.uid} onClick={() => drawCrossroads(index)} />)}</div></section><section className="cities">{game.players.map((player) => <City key={player.id} player={player} active={player.id === game.current} selectedCard={selected} onPlace={() => place(player.id)} infection={game.infection} />)}</section></div>
       <aside className="side-panel hand-panel"><div className="section-title"><span>Твоя рука</span><small>{game.players[0].hand.length} карт</small></div><div className="hand">{game.players[0].hand.map((card) => <Card card={card} key={card.uid} selected={selected?.uid === card.uid} onClick={() => game.current === 0 && game.phase === 'play' && setSelected(card)} />)}</div><p className="hint">{notice || (selected ? `«${selected.title}»: ${selected.effect} Нажми на город — мгновенный эффект будет отмечен в Хронике.` : 'Твои карты появятся здесь.')}</p></aside>
     </section>
     {winner && <div className="ending"><div><p className="eyebrow">летописец поставил точку</p><h2>{winner.name} побеждает</h2><strong>{score(winner)} победных очков</strong><div className="scoreboard">{game.players.map((player) => <span key={player.id}><b>{player.name}</b><i>{score(player)} ПО · {player.crusade} ✠ · {player.relics} реликв.</i></span>)}</div><div className="graph"><p>Победные очки по ходам</p><ScoreChart history={game.history} players={game.players} /></div><button onClick={() => setGame(freshGame(botCount))}>Ещё один год страданий</button></div></div>}
+    {bugOpen && <div className="bug-modal" onClick={() => bugStatus !== 'sending' && setBugOpen(false)}><form onSubmit={(event) => { event.preventDefault(); submitBug(); }} onClick={(event) => event.stopPropagation()}><h2>Сообщить об ошибке</h2><p>К отчёту будет приложена последняя хроника партии.</p><textarea autoFocus value={bugText} onChange={(event) => setBugText(event.target.value)} placeholder="Что произошло? (необязательно)" maxLength="1200" />{bugStatus === 'sent' ? <strong className="bug-success">Отчёт отправлен. Спасибо!</strong> : bugStatus === 'failed' ? <strong className="bug-failed">Не удалось отправить отчёт.</strong> : null}<div><button type="button" onClick={() => setBugOpen(false)} disabled={bugStatus === 'sending'}>Отмена</button><button className="start" type="submit" disabled={bugStatus === 'sending'}>Отправить</button></div></form></div>}
   </main>;
 }
