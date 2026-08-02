@@ -22,6 +22,7 @@ function freshGame(botCount) {
     discard: [],
     relicDeck: shuffle([...RELIC_CARDS]),
     forcedPlay: null,
+    pendingChoice: null,
     crusadePool: CRUSADE_POOL[players.length],
     crusadeLimit: CRUSADE_POOL[players.length],
     crusadeRound: 1,
@@ -51,14 +52,14 @@ function recordHistory(game, label) {
   game.history.push({ label, scores: game.players.map(score), crusade: game.players.map((player) => player.crusade) });
 }
 
-function Card({ card, small = false, onClick, selected, faceDown = false }) {
+function Card({ card, small = false, onClick, selected, targetable = false, faceDown = false }) {
   if (faceDown) return <button className={`card back ${small ? 'small' : ''}`} onClick={onClick} aria-label="Взять карту" />;
-  return <button className={`card ${small ? 'small' : ''} ${selected ? 'selected' : ''} ${card.epidemic ? 'epidemic' : ''}`} onClick={onClick} title={`${card.title}: ${card.effect}`}>
+  return <button className={`card ${small ? 'small' : ''} ${selected ? 'selected' : ''} ${targetable ? 'targetable' : ''} ${card.epidemic ? 'epidemic' : ''}`} onClick={onClick} title={`${card.title}: ${card.effect}`}>
     <img src={card.art} alt={card.title} />
   </button>;
 }
 
-function City({ player, active, selectedCard, onPlace, infection, plaguePreview, setPlaguePreview }) {
+function City({ player, active, selectedCard, onPlace, infection, plaguePreview, setPlaguePreview, residentTarget, onResidentTarget }) {
   const estates = ['дворяне', 'священники', 'простолюдины'];
   return <section className={`city ${active ? 'active' : ''}`}>
     <button className="city-head" onClick={onPlace} disabled={!selectedCard}>
@@ -69,7 +70,7 @@ function City({ player, active, selectedCard, onPlace, infection, plaguePreview,
     <div className="lanes">
       {estates.map((estate) => <div className="lane" key={estate}>
         <label>{estate}</label>
-        <div className="residents">{player.city.filter((card) => card.estate === estate).map((card) => <Card card={card} small key={card.uid} />)}</div>
+        <div className="residents">{player.city.filter((card) => card.estate === estate).map((card) => <Card card={card} small key={card.uid} targetable={residentTarget?.(card)} onClick={() => residentTarget?.(card) && onResidentTarget(player.id, card)} />)}</div>
       </div>)}
     </div>
   </section>;
@@ -171,6 +172,42 @@ export default function App() {
     }
     update((next) => play(next, next.current, selected, targetId));
     setSelected(null);
+  }
+
+  function canChooseResident(playerId, resident) {
+    const choice = game?.pendingChoice;
+    if (!choice || resident.uid === choice.cardUid || resident.id === 'corpse') return false;
+    if (choice.ability === 'inquisitor') return true;
+    return playerId === choice.targetId;
+  }
+
+  function chooseResident(playerId, resident) {
+    if (!game?.pendingChoice || !canChooseResident(playerId, resident)) return;
+    update((next) => {
+      const choice = next.pendingChoice;
+      const actor = next.players[choice.actorId];
+      const victimCity = next.players[playerId];
+      if (choice.ability === 'heretic-alch') {
+        discardResident(next, victimCity, resident, `✦ Еретик-алхимик уничтожает выбранного жителя`);
+        actor.crusade += Math.max(0, resident.vp);
+        next.log.unshift(`${actor.name} получает ${Math.max(0, resident.vp)} очк. Похода за «${resident.title}».`);
+      } else if (choice.ability === 'heretic-science') {
+        const destination = adjacentPlayers(next, playerId)[0];
+        if (destination) {
+          const infected = next.infection?.host === playerId;
+          moveResident(next, victimCity, destination, resident, `✦ Еретик-натуралист перемещает выбранного жителя в город ${destination.name}.`);
+          if (infected) next.infection.host = destination.id;
+        }
+      } else if (choice.ability === 'inquisitor') {
+        const wasHeretic = resident.id.startsWith('heretic-');
+        discardResident(next, victimCity, resident, `✦ Инквизитор ${actor.name} казнит выбранного жителя`);
+        if (wasHeretic) { const drawn = next.deck.shift(); if (drawn) actor.hand.push(drawn); next.log.unshift('✦ Инквизитор убивает Еретика и берёт карту.'); }
+      }
+      next.pendingChoice = null;
+      next.phase = 'play';
+      if (!next.forcedPlay && !actor.hand.length && next.current === actor.id) endTurn(next);
+    });
+    setNotice('Выбор применён.');
   }
 
   function finish(next) {
@@ -404,10 +441,16 @@ export default function App() {
     } else if (card.id === 'heretic-science') {
       const resident = strongestResident(target, card.uid);
       const destination = adjacentPlayers(next, targetId)[0];
-      if (resident && destination) { const epidemic = next.infection?.host === targetId; moveResident(next, target, destination, resident, `✦ Еретик-натуралист перемещает «${resident.title}» в город ${destination.name}.`); if (epidemic) next.infection.host = destination.id; }
+      if (resident && destination) {
+        if (owner.bot) { const epidemic = next.infection?.host === targetId; moveResident(next, target, destination, resident, `✦ Еретик-натуралист перемещает «${resident.title}» в город ${destination.name}.`); if (epidemic) next.infection.host = destination.id; }
+        else { next.pendingChoice = { ability: card.id, actorId: ownerId, targetId, cardUid: card.uid }; next.phase = 'choice'; activate('выбери жителя для перемещения.'); }
+      }
     } else if (card.id === 'heretic-alch') {
       const resident = strongestResident(target, card.uid);
-      if (resident) { discardResident(next, target, resident, '✦ Еретик-алхимик уничтожает жителя'); target.crusade += Math.max(0, resident.vp); }
+      if (resident) {
+        if (owner.bot) { discardResident(next, target, resident, '✦ Еретик-алхимик уничтожает жителя'); target.crusade += Math.max(0, resident.vp); }
+        else { next.pendingChoice = { ability: card.id, actorId: ownerId, targetId, cardUid: card.uid }; next.phase = 'choice'; activate('выбери жителя для уничтожения.'); }
+      }
     } else if (card.id === 'heretic-necro') {
       const sacrifice = owner.hand.find((item) => item.uid !== card.uid);
       const resurrected = next.discard.slice(-5).find((item) => !item.epidemic);
@@ -431,11 +474,12 @@ export default function App() {
       const botBurden = owner.bot && owner.city.filter((resident) => resident.uid !== card.uid && resident.vp < 0).sort((a, b) => a.vp - b.vp)[0];
       const victim = botBurden ?? strongestResident(target, card.uid);
       const victimCity = botBurden ? owner : target;
-      if (victim) {
-        const wasHeretic = victim.id.startsWith('heretic-');
-        discardResident(next, victimCity, victim, `✦ Инквизитор ${owner.name} казнит жителя`);
-        if (wasHeretic) { const drawn = next.deck.shift(); if (drawn) owner.hand.push(drawn); activate('убивает Еретика и берёт карту.'); }
-      }
+      const anyVictim = next.players.some((player) => player.city.some((resident) => resident.uid !== card.uid && resident.id !== 'corpse'));
+      if (owner.bot && victim) {
+          const wasHeretic = victim.id.startsWith('heretic-');
+          discardResident(next, victimCity, victim, `✦ Инквизитор ${owner.name} казнит жителя`);
+          if (wasHeretic) { const drawn = next.deck.shift(); if (drawn) owner.hand.push(drawn); activate('убивает Еретика и берёт карту.'); }
+      } else if (!owner.bot && anyVictim) { next.pendingChoice = { ability: card.id, actorId: ownerId, targetId: null, cardUid: card.uid }; next.phase = 'choice'; activate('выбери любого жителя для казни.'); }
       else activate('не находит жертву.');
     } else if (card.id === 'episcop') {
       activate('созывает общий Крестовый поход.'); triggerCrusade(next, targetId);
@@ -510,7 +554,7 @@ export default function App() {
         }
       }
     }
-    if (!next.forcedPlay && !owner.hand.length && next.current === ownerId) endTurn(next);
+    if (!next.forcedPlay && !next.pendingChoice && !owner.hand.length && next.current === ownerId) endTurn(next);
   }
 
   useEffect(() => {
@@ -548,10 +592,11 @@ export default function App() {
   const winner = game.ended ? [...game.players].sort((a, b) => score(b) - score(a))[0] : null;
   return <main className="game-shell">
     <header><div className="brand"><p className="eyebrow">сезон чумы · год господень 1248</p><small className="build-version">#{BUILD_VERSION}</small><div className="header-actions"><button className="log-toggle" title="Показать/скрыть хронику" aria-label="Показать/скрыть хронику" onClick={() => setLogOpen((open) => !open)}>{logOpen ? 'Л' : 'Л'}</button><button className="report-button" title="Сообщить об ошибке" aria-label="Сообщить об ошибке" onClick={() => { setBugStatus(''); setBugOpen(true); }}><img src="/assets/report-bug.jpg" alt="" /></button></div></div><div className="crusade-meter"><span>Святая земля · поход {Math.min(game.crusadeRound, 3)}/3</span><strong>{game.crusadeRound <= 3 ? game.crusadePool : 'захвачена'} {game.crusadeRound <= 3 && <small>/ {game.crusadeLimit}</small>}</strong><i style={{ width: `${game.crusadeRound <= 3 ? (game.crusadePool / game.crusadeLimit) * 100 : 0}%` }} /></div></header>
+    {game.pendingChoice && <div className="resident-choice"><strong>{game.pendingChoice.ability === 'heretic-alch' ? 'Еретик-алхимик' : game.pendingChoice.ability === 'heretic-science' ? 'Еретик-натуралист' : 'Инквизитор'} требует выбора</strong><span>{game.pendingChoice.ability === 'heretic-alch' ? 'Нажми на жителя, которого уничтожить.' : game.pendingChoice.ability === 'heretic-science' ? 'Нажми на жителя, которого переместить.' : 'Нажми на любого жителя для казни.'}</span></div>}
     <section className="table">
       <aside className="side-panel"><div className={`deck-zone ${game.phase === 'draw-deck' ? 'ready' : ''}`}><Card faceDown onClick={drawDeck} /><b>{game.deck.length}</b><span>колода</span><small>Возьми карту</small></div>{logOpen && <div className="chronicle"><p>Хроника <i>{game.log.length}</i></p>{game.log.map((line, index) => <small key={`${line}-${index}`}>{line}</small>)}</div>}</aside>
-      <div className="board"><section className={`crossroads ${game.phase === 'draw-crossroads' ? 'ready' : ''}`}><div className="section-title"><span>Перекрёсток</span><small>выбери одну карту после колоды</small></div><div className="crossroad-cards">{game.crossroads.map((card, index) => <Card card={card} key={card.uid} onClick={() => drawCrossroads(index)} />)}</div></section><section className="cities" style={{ '--player-count': game.players.length }}>{game.players.map((player) => <City key={player.id} player={player} active={player.id === game.current} selectedCard={selected} onPlace={() => place(player.id)} infection={game.infection} plaguePreview={plaguePreview} setPlaguePreview={setPlaguePreview} />)}</section></div>
-      <aside className="side-panel hand-panel"><div className="section-title"><span>Твоя рука</span><small>{game.players[0].hand.length} карт</small></div><div className="hand">{game.players[0].hand.map((card) => <Card card={card} key={card.uid} selected={selected?.uid === card.uid} onClick={() => game.current === 0 && game.phase === 'play' && setSelected(card)} />)}</div><p className="hint">{notice || (game.forcedPlay?.playerId === 0 ? `Ведьма заставляет разыграть ещё ${game.forcedPlay.cardIds.length} карты немедленно.` : selected ? `«${selected.title}»: ${selected.effect} Нажми на город — мгновенный эффект будет отмечен в Хронике.` : 'Твои карты появятся здесь.')}</p></aside>
+      <div className="board"><section className={`crossroads ${game.phase === 'draw-crossroads' ? 'ready' : ''}`}><div className="section-title"><span>Перекрёсток</span><small>выбери одну карту после колоды</small></div><div className="crossroad-cards">{game.crossroads.map((card, index) => <Card card={card} key={card.uid} onClick={() => drawCrossroads(index)} />)}</div></section><section className="cities" style={{ '--player-count': game.players.length }}>{game.players.map((player) => <City key={player.id} player={player} active={player.id === game.current} selectedCard={selected} onPlace={() => place(player.id)} infection={game.infection} plaguePreview={plaguePreview} setPlaguePreview={setPlaguePreview} residentTarget={(resident) => canChooseResident(player.id, resident)} onResidentTarget={chooseResident} />)}</section></div>
+      <aside className="side-panel hand-panel"><div className="section-title"><span>Твоя рука</span><small>{game.players[0].hand.length} карт</small></div><div className="hand">{game.players[0].hand.map((card) => <Card card={card} key={card.uid} selected={selected?.uid === card.uid} onClick={() => game.current === 0 && game.phase === 'play' && !game.pendingChoice && setSelected(card)} />)}</div><p className="hint">{notice || (game.pendingChoice ? 'Выделенные жители на поле кликабельны.' : game.forcedPlay?.playerId === 0 ? `Ведьма заставляет разыграть ещё ${game.forcedPlay.cardIds.length} карты немедленно.` : selected ? `«${selected.title}»: ${selected.effect} Нажми на город — мгновенный эффект будет отмечен в Хронике.` : 'Твои карты появятся здесь.')}</p></aside>
     </section>
     {winner && <div className="ending"><div><p className="eyebrow">летописец поставил точку</p><h2>{winner.name} побеждает</h2><strong>{score(winner)} победных очков</strong><div className="scoreboard">{game.players.map((player) => <span key={player.id}><b>{player.name}</b><i>{score(player)} ПО · {player.crusade} ✠ · {player.relics.length} реликв.</i></span>)}</div><div className="graph"><p>Победные очки по ходам</p><ScoreChart history={game.history} players={game.players} /></div><button onClick={() => setGame(freshGame(botCount))}>Ещё один год страданий</button></div></div>}
     {bugOpen && <div className="bug-modal" onClick={() => bugStatus !== 'sending' && setBugOpen(false)}><form onSubmit={(event) => { event.preventDefault(); submitBug(); }} onClick={(event) => event.stopPropagation()}><h2>Сообщить об ошибке</h2><p>К отчёту будет приложена последняя хроника партии.</p><textarea autoFocus value={bugText} onChange={(event) => setBugText(event.target.value)} placeholder="Что произошло? (необязательно)" maxLength="1200" />{bugStatus === 'sent' ? <strong className="bug-success">Отчёт отправлен. Спасибо!</strong> : bugStatus === 'failed' ? <strong className="bug-failed">Не удалось отправить отчёт.</strong> : null}<div><button type="button" onClick={() => setBugOpen(false)} disabled={bugStatus === 'sending'}>Отмена</button><button className="start" type="submit" disabled={bugStatus === 'sending'}>Отправить</button></div></form></div>}
