@@ -186,11 +186,19 @@ export default function App() {
     const infection = next.infection;
     if (!infection || infection.host !== next.current) return;
     const city = next.players[infection.host];
-    const protectedIds = new Set(['leper', 'cat']);
+    const protectedIds = new Set(['leper', 'cat', 'corpse']);
     const candidates = city.city.filter((card) => !protectedIds.has(card.id));
-    const clergyFirst = infection.card.id === 'leprosy';
-    candidates.sort((a, b) => (clergyFirst && a.estate === 'священники' ? -1 : 0) - (clergyFirst && b.estate === 'священники' ? -1 : 0) || a.immunity - b.immunity);
-    const victims = candidates.slice(0, infection.power);
+    const priorityEstate = { cholera: 'простолюдины', leprosy: 'священники', malaria: 'дворяне' }[infection.card.id];
+    candidates.sort((a, b) => (priorityEstate && a.estate === priorityEstate ? -1 : 0) - (priorityEstate && b.estate === priorityEstate ? -1 : 0) || (infection.card.id === 'black_pox' ? b.immunity - a.immunity : a.immunity - b.immunity));
+    let victims = candidates.slice(0, infection.power);
+    const peasantVictim = victims.find((victim) => victim.id === 'peasant');
+    if (peasantVictim) victims = city.city.filter((resident) => resident.id === 'peasant' && !protectedIds.has(resident.id));
+    if (city.city.some((resident) => resident.id === 'cat') && victims.length) {
+      const cat = city.city.find((resident) => resident.id === 'cat');
+      city.city = city.city.filter((resident) => resident.uid !== cat.uid);
+      next.discard.push(cat);
+      victims = victims.slice(0, Math.max(0, victims.length - 1));
+    }
     victims.forEach((victim) => {
       city.city.splice(city.city.findIndex((card) => card.uid === victim.uid), 1);
       next.discard.push(victim);
@@ -228,13 +236,25 @@ export default function App() {
     departures.forEach(({ player, pilgrims }) => {
       if (!pilgrims.length) return;
       const standardBearers = pilgrims.filter((card) => card.id === 'standard_bearer');
-      const points = pilgrims.reduce((total, card) => total + card.crusade, 0) + standardBearers.length * Math.max(0, pilgrims.length - 1);
+      const points = pilgrims.every((card) => card.id === 'warhorse') ? 0 : pilgrims.reduce((total, card) => total + card.crusade, 0) + standardBearers.length * Math.max(0, pilgrims.length - 1);
       player.city = player.city.filter((card) => !pilgrims.includes(card));
+      if (pilgrims.some((card) => card.id === 'guard') && player.imprisoned?.length) {
+        player.hand.push(...player.imprisoned);
+        player.imprisoned = [];
+        next.log.unshift(`${player.name} освобождает карты, спрятанные Стражником.`);
+      }
       pilgrims.forEach((card) => {
         if (card.id === 'deserter') {
           const destination = next.players[(player.id + 1) % next.players.length];
           destination.city.push(card);
           next.log.unshift(`✦ Дезертир вместо сброса появляется в городе ${destination.name}.`);
+        } else if (card.id === 'virgin') {
+          const replacementIndex = next.deck.findIndex((candidate) => !candidate.epidemic && !WOMEN.has(candidate.id));
+          if (replacementIndex >= 0) {
+            const replacement = next.deck.splice(replacementIndex, 1)[0];
+            player.city.push(replacement);
+            next.log.unshift(`✦ Девственник заменяется мужчиной «${replacement.title}» из колоды.`);
+          } else next.discard.push(card);
         } else next.discard.push(card);
       });
       if (next.crusadeRound <= 3) {
@@ -256,12 +276,47 @@ export default function App() {
 
   function discardResident(next, player, resident, reason) {
     player.city = player.city.filter((item) => item.uid !== resident.uid);
+    if (resident.id === 'guard' && player.imprisoned?.length) {
+      next.deck.push(...player.imprisoned);
+      player.imprisoned = [];
+    }
     next.discard.push(resident);
     next.log.unshift(`${reason}: «${resident.title}» отправляется в сброс.`);
   }
 
   function strongestResident(player, exceptUid) {
-    return player.city.filter((resident) => resident.uid !== exceptUid).sort((a, b) => b.vp - a.vp || b.immunity - a.immunity)[0];
+    return player.city.filter((resident) => resident.uid !== exceptUid && resident.id !== 'corpse').sort((a, b) => b.vp - a.vp || b.immunity - a.immunity)[0];
+  }
+
+  function adjacentPlayers(next, playerId) {
+    return [next.players[(playerId + next.players.length - 1) % next.players.length], next.players[(playerId + 1) % next.players.length]]
+      .filter((player, index, players) => player.id !== playerId && players.findIndex((item) => item.id === player.id) === index);
+  }
+
+  function moveResident(next, from, to, resident, message) {
+    if (!resident) return false;
+    from.city = from.city.filter((item) => item.uid !== resident.uid);
+    const midget = resident.id !== 'midget' && from.city.find((item) => item.id === 'midget');
+    if (midget) from.city = from.city.filter((item) => item.uid !== midget.uid);
+    if (resident.id === 'adaptable') {
+      const estates = ['простолюдины', 'священники', 'дворяне'];
+      resident.vp += 1;
+      resident.estate = estates[Math.min(estates.indexOf(resident.estate) + 1, estates.length - 1)];
+    }
+    to.city.push(resident);
+    if (midget) to.city.push(midget);
+    if (message) next.log.unshift(message);
+    return true;
+  }
+
+  function sendResidentOnCrusade(next, player, resident, points = resident.crusade || Math.max(0, resident.vp)) {
+    if (!resident) return 0;
+    player.city = player.city.filter((item) => item.uid !== resident.uid);
+    next.discard.push(resident);
+    const sent = Math.max(0, points);
+    player.crusade += sent;
+    if (next.crusadeRound <= 3) next.crusadePool = Math.max(0, next.crusadePool - sent);
+    return sent;
   }
 
   // Effects that do not need a human choice resolve immediately, and every one
@@ -276,6 +331,75 @@ export default function App() {
       drawn.forEach((drawnCard) => target.hand.push(drawnCard));
       next.forcedPlay = drawn.length ? { playerId: targetId, cardIds: drawn.map((drawnCard) => drawnCard.uid) } : null;
       activate(`${target.name} получает ${drawn.length} карты из колоды и должен разыграть их немедленно.`);
+    }
+    if (card.id === 'lady') {
+      const adjacent = adjacentPlayers(next, targetId).find((player) => player.city.some((resident) => resident.id === 'knight'));
+      const knight = adjacent?.city.find((resident) => resident.id === 'knight');
+      if (knight) activate(`отправляет Рыцаря из города ${adjacent.name} в Поход за ${sendResidentOnCrusade(next, adjacent, knight)} очк.`);
+    } else if (card.id === 'driver') {
+      const resident = target.city.find((item) => item.uid !== card.uid && item.estate === 'простолюдины');
+      const adjacent = adjacentPlayers(next, targetId).find((player) => player.city.some((item) => item.estate === resident?.estate));
+      const replacement = adjacent?.city.find((item) => item.estate === resident?.estate);
+      if (resident && replacement) {
+        target.city = target.city.filter((item) => item.uid !== resident.uid); adjacent.city = adjacent.city.filter((item) => item.uid !== replacement.uid);
+        target.city.push(replacement); adjacent.city.push(resident); activate(`меняет жителей сословия «${resident.estate}» с городом ${adjacent.name}.`);
+      }
+    } else if (card.id === 'minstrel') {
+      const adjacent = next.players.filter((player) => player.id !== targetId).sort((a, b) => b.crusade - a.crusade)[0];
+      const stolen = Math.min(3, adjacent?.crusade || 0);
+      if (adjacent && stolen) { adjacent.crusade -= stolen; target.crusade += stolen; activate(`крадёт ${stolen} очк. Похода у города ${adjacent.name}.`); }
+    } else if (card.id === 'troubadur') {
+      const stolen = next.players.filter((player) => player.id !== targetId).reduce((total, player) => { const amount = Math.min(1, player.crusade); player.crusade -= amount; return total + amount; }, 0);
+      target.crusade += stolen; activate(`крадёт по 1 очку Похода у соседних городов (${stolen} всего).`);
+    } else if (card.id === 'harlot' || card.id === 'devka') {
+      const adjacent = adjacentPlayers(next, targetId).find((player) => player.city.some((resident) => resident.id === 'monk'));
+      const monk = adjacent?.city.find((resident) => resident.id === 'monk');
+      if (monk) moveResident(next, adjacent, target, monk, `✦ ${card.title} переманивает Монаха из города ${adjacent.name}.`);
+    } else if (card.id === 'fanatic') {
+      const adjacent = adjacentPlayers(next, targetId).find((player) => player.city.some((resident) => resident.estate === 'простолюдины' && resident.crusade > 0));
+      const resident = adjacent?.city.find((item) => item.estate === 'простолюдины' && item.crusade > 0);
+      if (resident) moveResident(next, adjacent, target, resident, `✦ Фанатик переманивает крестоносца из города ${adjacent.name}.`);
+    } else if (card.id === 'kolya') {
+      adjacentPlayers(next, targetId).forEach((adjacent) => {
+        const woman = adjacent.city.find((resident) => WOMEN.has(resident.id));
+        if (woman) moveResident(next, adjacent, target, woman, `✦ Коля переманивает «${woman.title}» из города ${adjacent.name}.`);
+      });
+    } else if (card.id === 'recruit') {
+      const recruits = target.city.filter((resident) => resident.uid !== card.uid && resident.crusade <= 0 && resident.id !== 'corpse');
+      const sent = recruits.reduce((total, resident) => total + sendResidentOnCrusade(next, target, resident, Math.max(0, resident.vp)), 0);
+      if (sent) activate(`отправляет мирных жителей в Поход за ${sent} очк.`);
+    } else if (card.id === 'jester') {
+      const crossroadsCard = next.crossroads.find((item) => !item.epidemic);
+      if (crossroadsCard) { activate(`копирует мгновенное свойство «${crossroadsCard.title}».`); resolveEntryAbility(next, ownerId, targetId, crossroadsCard); }
+    } else if (card.id === 'possesed') {
+      const localCard = target.city.find((resident) => resident.uid !== card.uid && resident.id !== 'possesed');
+      if (localCard) { activate(`повторяет мгновенное свойство «${localCard.title}».`); resolveEntryAbility(next, ownerId, targetId, localCard); }
+    } else if (card.id === 'innkeeper') {
+      const drawn = next.deck.shift();
+      if (drawn) { target.city.push(drawn); activate(`кладёт «${drawn.title}» в город без мгновенного свойства.`); }
+    } else if (card.id === 'guard') {
+      const imprisoned = next.deck.shift();
+      if (imprisoned) { target.imprisoned = [...(target.imprisoned || []), imprisoned]; activate(`прячет верхнюю карту колоды под Стражником.`); }
+    } else if (card.id === 'cupbearer') {
+      const noble = target.city.find((resident) => resident.estate === 'дворяне' && resident.uid !== card.uid);
+      const adjacent = adjacentPlayers(next, targetId).find((player) => player.city.some((resident) => resident.estate === 'простолюдины'));
+      const commoner = adjacent?.city.find((resident) => resident.estate === 'простолюдины');
+      if (noble && commoner) { target.city = target.city.filter((item) => item.uid !== noble.uid); adjacent.city = adjacent.city.filter((item) => item.uid !== commoner.uid); target.city.push(commoner); adjacent.city.push(noble); activate(`меняет дворянина на простолюдина из города ${adjacent.name}.`); }
+    } else if (card.id === 'hare') {
+      const resident = target.city.find((item) => item.uid !== card.uid);
+      const replacement = next.crossroads[0];
+      if (resident && replacement) { target.city = target.city.filter((item) => item.uid !== resident.uid); next.crossroads[0] = resident; target.city.push(replacement); activate(`меняет «${resident.title}» на «${replacement.title}» с Перекрёстка.`); }
+    } else if (card.id === 'heretic-science') {
+      const resident = strongestResident(target, card.uid);
+      const destination = adjacentPlayers(next, targetId)[0];
+      if (resident && destination) { const epidemic = next.infection?.host === targetId; moveResident(next, target, destination, resident, `✦ Еретик-натуралист перемещает «${resident.title}» в город ${destination.name}.`); if (epidemic) next.infection.host = destination.id; }
+    } else if (card.id === 'heretic-alch') {
+      const resident = strongestResident(target, card.uid);
+      if (resident) { discardResident(next, target, resident, '✦ Еретик-алхимик уничтожает жителя'); target.crusade += Math.max(0, resident.vp); }
+    } else if (card.id === 'heretic-necro') {
+      const sacrifice = owner.hand.find((item) => item.uid !== card.uid);
+      const resurrected = next.discard.slice(-5).find((item) => !item.epidemic);
+      if (sacrifice && resurrected) { owner.hand = owner.hand.filter((item) => item.uid !== sacrifice.uid); next.discard.push(sacrifice); next.discard = next.discard.filter((item) => item.uid !== resurrected.uid); target.city.push(resurrected); activate(`сбрасывает карту и возвращает «${resurrected.title}» из сброса.`); }
     }
     if (WOMEN.has(card.id) && mutilator) {
       const destination = Array.from({ length: next.players.length - 1 }, (_, step) => next.players[(targetId + step + 1) % next.players.length])
@@ -318,6 +442,10 @@ export default function App() {
       const victim = target.city.filter((resident) => resident.uid !== card.uid && resident.estate === 'дворяне').sort((a, b) => b.vp - a.vp)[0];
       if (victim) discardResident(next, target, victim, '✦ Палач казнит дворянина');
       else activate('не находит дворянина в этом городе.');
+      adjacentPlayers(next, targetId).forEach((adjacent) => {
+        const commoner = adjacent.city.find((resident) => resident.estate === 'простолюдины');
+        if (commoner) moveResident(next, adjacent, target, commoner, `✦ Палач переманивает «${commoner.title}» из города ${adjacent.name}.`);
+      });
     } else if (card.id === 'priest') {
       const drawn = next.deck.shift();
       if (!drawn) activate('колода пуста.');
