@@ -147,8 +147,7 @@ export default function App() {
     update((next) => {
       const card = next.crossroads.splice(index, 1)[0];
       next.players[next.current].hand.push(card);
-      const replacement = next.deck.shift();
-      if (replacement) next.crossroads.push(replacement);
+      refillCrossroads(next);
       next.phase = 'play';
     });
     say('Разыграй обе карты. В свой город или в чужой.');
@@ -170,6 +169,10 @@ export default function App() {
     next.ended = true;
     next.phase = 'ended';
     next.log.unshift('Колода иссякла. Пора считать тех, кто ещё дышит.');
+  }
+
+  function refillCrossroads(next) {
+    while (next.crossroads.length < 3 && next.deck.length) next.crossroads.push(next.deck.shift());
   }
 
   function resolveEpidemic(next) {
@@ -291,7 +294,7 @@ export default function App() {
       else activate('не находит Леди или Девки в городе.');
     } else if (card.id === 'crossbowman') {
       const victim = next.crossroads.sort((a, b) => b.vp - a.vp)[0];
-      if (victim) { next.crossroads = next.crossroads.filter((item) => item.uid !== victim.uid); next.discard.push(victim); activate(`сбрасывает «${victim.title}» с Перекрёстка.`); }
+      if (victim) { next.crossroads = next.crossroads.filter((item) => item.uid !== victim.uid); next.discard.push(victim); refillCrossroads(next); activate(`сбрасывает «${victim.title}» с Перекрёстка.`); }
       else activate('не находит персонажей на Перекрёстке.');
     } else if (card.id === 'bandit') {
       const enemy = next.players.filter((player) => player.id !== targetId).sort((a, b) => score(b) - score(a))[0];
@@ -351,7 +354,7 @@ export default function App() {
       } else if (next.phase === 'draw-crossroads') {
         const index = Math.floor(Math.random() * next.crossroads.length);
         const card = next.crossroads.splice(index, 1)[0]; bot.hand.push(card);
-        const replacement = next.deck.shift(); if (replacement) next.crossroads.push(replacement);
+        refillCrossroads(next);
         next.phase = 'play';
       } else if (next.phase === 'play') {
         const card = bot.hand[0];
