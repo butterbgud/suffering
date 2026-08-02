@@ -7,14 +7,10 @@ const NAMES = ['Конста', 'Гертруда', 'Ульрих', 'Ингебо
 const BOT_NAMES = ['Гертруда', 'Ульрих', 'Ингеборга', 'Тибальт', 'Матильда'];
 const CRUSADE_POOL = { 2: 16, 3: 16, 4: 20, 5: 23, 6: 25 };
 const RELIC_VP = 6;
-const LEFT_CITY_ART = Array.from({ length: 14 }, (_, index) => `city${index + 1}`);
-const RIGHT_CITY_ART = ['city15', 'city16', 'city17', 'city18'];
-
-const randomItem = (items) => items[Math.floor(Math.random() * items.length)];
 
 function freshGame(botCount) {
   const deck = shuffle(buildDeck());
-  const players = Array.from({ length: botCount + 1 }, (_, id) => ({ id, name: id ? BOT_NAMES[id - 1] : NAMES[0], bot: id > 0, city: [], cityArt: { left: randomItem(LEFT_CITY_ART), right: randomItem(RIGHT_CITY_ART) }, hand: [], crusade: 0, relics: 0 }));
+  const players = Array.from({ length: botCount + 1 }, (_, id) => ({ id, name: id ? BOT_NAMES[id - 1] : NAMES[0], bot: id > 0, city: [], hand: [], crusade: 0, relics: 0 }));
   return {
     deck: deck.slice(3),
     crossroads: deck.slice(0, 3),
@@ -61,7 +57,6 @@ function Card({ card, small = false, onClick, selected, faceDown = false }) {
 function City({ player, active, selectedCard, onPlace, infection }) {
   const estates = ['дворяне', 'священники', 'простолюдины'];
   return <section className={`city ${active ? 'active' : ''}`}>
-    <div className="city-art" aria-hidden="true"><img src={`/assets/ui/${player.cityArt.left}.webp`} alt="" /><img src={`/assets/ui/${player.cityArt.right}.webp`} alt="" onError={(event) => { event.currentTarget.onerror = null; event.currentTarget.src = '/assets/ui/city15.webp'; }} /></div>
     <button className="city-head" onClick={onPlace} disabled={!selectedCard}>
       <span>{player.name}</span><b>{score(player)} ПО</b><i>{player.crusade} ✠</i>
     </button>
