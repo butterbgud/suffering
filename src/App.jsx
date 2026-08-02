@@ -177,8 +177,9 @@ export default function App() {
   function canChooseResident(playerId, resident) {
     const choice = game?.pendingChoice;
     if (!choice || resident.uid === choice.cardUid || resident.id === 'corpse') return false;
-    if (choice.ability === 'inquisitor') return true;
-    return playerId === choice.targetId;
+    if (playerId !== choice.targetId) return false;
+    if (choice.ability === 'recruit') return choice.recruitIds.includes(resident.uid) && resident.crusade <= 0;
+    return true;
   }
 
   function chooseResident(playerId, resident) {
@@ -202,12 +203,30 @@ export default function App() {
         const wasHeretic = resident.id.startsWith('heretic-');
         discardResident(next, victimCity, resident, `✦ Инквизитор ${actor.name} казнит выбранного жителя`);
         if (wasHeretic) { const drawn = next.deck.shift(); if (drawn) actor.hand.push(drawn); next.log.unshift('✦ Инквизитор убивает Еретика и берёт карту.'); }
+      } else if (choice.ability === 'recruit') {
+        const roundBefore = next.crusadeRound;
+        const sent = sendResidentOnCrusade(next, victimCity, resident, Math.max(0, resident.vp));
+        next.log.unshift(`${actor.name} отправляет «${resident.title}» в Поход за ${sent} очк.`);
+        choice.recruitIds = choice.recruitIds.filter((uid) => uid !== resident.uid);
+        if (!choice.recruitIds.length || next.crusadeRound !== roundBefore) next.pendingChoice = null;
       }
-      next.pendingChoice = null;
-      next.phase = 'play';
+      if (choice.ability !== 'recruit' || !next.pendingChoice) next.pendingChoice = null;
+      next.phase = next.pendingChoice ? 'choice' : 'play';
       if (!next.forcedPlay && !actor.hand.length && next.current === actor.id) endTurn(next);
     });
     setNotice('Выбор применён.');
+  }
+
+  function skipRecruiter() {
+    if (game?.pendingChoice?.ability !== 'recruit') return;
+    update((next) => {
+      const actor = next.players[next.pendingChoice.actorId];
+      next.pendingChoice = null;
+      next.phase = 'play';
+      next.log.unshift(`${actor.name} решает не отправлять больше жителей в Поход.`);
+      if (!next.forcedPlay && !actor.hand.length && next.current === actor.id) endTurn(next);
+    });
+    setNotice('Рекрутёр пропускает способность.');
   }
 
   function canChooseCrossroad(card) {
@@ -330,14 +349,18 @@ export default function App() {
     });
     if (next.crusadeRound <= 3) next.crusadePool = Math.max(0, next.crusadePool - sent);
     next.log.unshift(`${next.players[ownerId].name} созывает ${local ? 'местный' : 'общий'} Крестовый поход: Святая Земля теряет ${sent} очк.`);
-    if (next.crusadeRound <= 3 && next.crusadePool === 0) {
-      const winner = [...next.players].sort((a, b) => b.crusade - a.crusade || a.relics.length - b.relics.length || b.city.filter((card) => card.estate === 'священники').length - a.city.filter((card) => card.estate === 'священники').length || score(a) - score(b))[0];
-      winner.relics.push(next.relicDeck.shift() || RELIC_CARDS[(next.crusadeRound - 1) % RELIC_CARDS.length]);
-      next.log.unshift(`${winner.name} получает Реликвию: +${RELIC_VP} ПО в конце игры.`);
-      next.players.forEach((player) => { player.crusade = 0; });
-      next.crusadeRound += 1;
-      next.crusadePool = next.crusadeRound <= 3 ? next.crusadeLimit : 0;
-    }
+    resolveCrusadeRound(next);
+  }
+
+  function resolveCrusadeRound(next) {
+    if (next.crusadeRound > 3 || next.crusadePool > 0) return false;
+    const winner = [...next.players].sort((a, b) => b.crusade - a.crusade || a.relics.length - b.relics.length || b.city.filter((card) => card.estate === 'священники').length - a.city.filter((card) => card.estate === 'священники').length || score(a) - score(b))[0];
+    winner.relics.push(next.relicDeck.shift() || RELIC_CARDS[(next.crusadeRound - 1) % RELIC_CARDS.length]);
+    next.log.unshift(`${winner.name} получает Реликвию: +${RELIC_VP} ПО в конце игры.`);
+    next.players.forEach((player) => { player.crusade = 0; });
+    next.crusadeRound += 1;
+    next.crusadePool = next.crusadeRound <= 3 ? next.crusadeLimit : 0;
+    return true;
   }
 
   function discardResident(next, player, resident, reason) {
@@ -392,9 +415,11 @@ export default function App() {
     if (!resident) return 0;
     player.city = player.city.filter((item) => item.uid !== resident.uid);
     next.discard.push(resident);
-    const sent = Math.max(0, points);
+    const available = next.crusadeRound <= 3 ? next.crusadePool : 0;
+    const sent = Math.min(Math.max(0, points), available);
     player.crusade += sent;
     if (next.crusadeRound <= 3) next.crusadePool = Math.max(0, next.crusadePool - sent);
+    resolveCrusadeRound(next);
     return sent;
   }
 
@@ -450,8 +475,16 @@ export default function App() {
       });
     } else if (card.id === 'recruit') {
       const recruits = target.city.filter((resident) => resident.uid !== card.uid && resident.crusade <= 0 && resident.id !== 'corpse');
-      const sent = recruits.reduce((total, resident) => total + sendResidentOnCrusade(next, target, resident, Math.max(0, resident.vp)), 0);
-      if (sent) activate(`отправляет мирных жителей в Поход за ${sent} очк.`);
+      if (owner.bot) {
+        const roundBefore = next.crusadeRound;
+        const sent = recruits.reduce((total, resident) => total + sendResidentOnCrusade(next, target, resident, Math.max(0, resident.vp)), 0);
+        if (sent) activate(`отправляет мирных жителей в Поход за ${sent} очк.`);
+        if (next.crusadeRound !== roundBefore) activate('Святая Земля достигла лимита — распределена Реликвия.');
+      } else if (recruits.length) {
+        next.pendingChoice = { ability: card.id, actorId: ownerId, targetId, cardUid: card.uid, recruitIds: recruits.map((resident) => resident.uid) };
+        next.phase = 'choice';
+        activate('выбери мирного жителя для Похода или пропусти способность.');
+      }
     } else if (card.id === 'jester') {
       const crossroadsCard = next.crossroads.find((item) => !item.epidemic);
       if (crossroadsCard) {
@@ -512,12 +545,12 @@ export default function App() {
       const botBurden = owner.bot && owner.city.filter((resident) => resident.uid !== card.uid && resident.vp < 0).sort((a, b) => a.vp - b.vp)[0];
       const victim = botBurden ?? strongestResident(target, card.uid);
       const victimCity = botBurden ? owner : target;
-      const anyVictim = next.players.some((player) => player.city.some((resident) => resident.uid !== card.uid && resident.id !== 'corpse'));
+      const anyVictim = owner.city.some((resident) => resident.uid !== card.uid && resident.id !== 'corpse');
       if (owner.bot && victim) {
           const wasHeretic = victim.id.startsWith('heretic-');
           discardResident(next, victimCity, victim, `✦ Инквизитор ${owner.name} казнит жителя`);
           if (wasHeretic) { const drawn = next.deck.shift(); if (drawn) owner.hand.push(drawn); activate('убивает Еретика и берёт карту.'); }
-      } else if (!owner.bot && anyVictim) { next.pendingChoice = { ability: card.id, actorId: ownerId, targetId: null, cardUid: card.uid }; next.phase = 'choice'; activate('выбери любого жителя для казни.'); }
+      } else if (!owner.bot && anyVictim) { next.pendingChoice = { ability: card.id, actorId: ownerId, targetId: ownerId, cardUid: card.uid }; next.phase = 'choice'; activate('выбери жителя в своём городе для казни.'); }
       else activate('не находит жертву.');
     } else if (card.id === 'episcop') {
       activate('созывает общий Крестовый поход.'); triggerCrusade(next, targetId);
@@ -630,7 +663,7 @@ export default function App() {
   const winner = game.ended ? [...game.players].sort((a, b) => score(b) - score(a))[0] : null;
   return <main className="game-shell">
     <header><div className="brand"><p className="eyebrow">сезон чумы · год господень 1248</p><small className="build-version">#{BUILD_VERSION}</small><div className="header-actions"><button className="log-toggle" title="Показать/скрыть хронику" aria-label="Показать/скрыть хронику" onClick={() => setLogOpen((open) => !open)}>{logOpen ? 'Л' : 'Л'}</button><button className="report-button" title="Сообщить об ошибке" aria-label="Сообщить об ошибке" onClick={() => { setBugStatus(''); setBugOpen(true); }}><img src="/assets/report-bug.jpg" alt="" /></button></div></div><div className="crusade-meter"><span>Святая земля · поход {Math.min(game.crusadeRound, 3)}/3</span><strong>{game.crusadeRound <= 3 ? game.crusadePool : 'захвачена'} {game.crusadeRound <= 3 && <small>/ {game.crusadeLimit}</small>}</strong><i style={{ width: `${game.crusadeRound <= 3 ? (game.crusadePool / game.crusadeLimit) * 100 : 0}%` }} /></div></header>
-    {game.pendingChoice && <div className="resident-choice"><strong>{game.pendingChoice.ability === 'heretic-alch' ? 'Еретик-алхимик' : game.pendingChoice.ability === 'heretic-science' ? 'Еретик-натуралист' : game.pendingChoice.ability === 'inquisitor' ? 'Инквизитор' : 'Шут'} требует выбора</strong><span>{game.pendingChoice.ability === 'heretic-alch' ? 'Нажми на жителя, которого уничтожить.' : game.pendingChoice.ability === 'heretic-science' ? 'Нажми на жителя, которого переместить.' : game.pendingChoice.ability === 'inquisitor' ? 'Нажми на любого жителя для казни.' : 'Нажми на любую карту Перекрёстка, чтобы скопировать её свойство.'}</span></div>}
+    {game.pendingChoice && <div className="resident-choice"><strong>{game.pendingChoice.ability === 'heretic-alch' ? 'Еретик-алхимик' : game.pendingChoice.ability === 'heretic-science' ? 'Еретик-натуралист' : game.pendingChoice.ability === 'inquisitor' ? 'Инквизитор' : game.pendingChoice.ability === 'recruit' ? 'Рекрутёр' : 'Шут'} требует выбора</strong><span>{game.pendingChoice.ability === 'heretic-alch' ? 'Нажми на жителя, которого уничтожить.' : game.pendingChoice.ability === 'heretic-science' ? 'Нажми на жителя, которого переместить.' : game.pendingChoice.ability === 'inquisitor' ? 'Нажми на жителя в своём городе для казни.' : game.pendingChoice.ability === 'recruit' ? 'Нажми на мирного жителя, чтобы отправить его в Поход, или пропусти.' : 'Нажми на любую карту Перекрёстка, чтобы скопировать её свойство.'}</span>{game.pendingChoice.ability === 'recruit' && <button type="button" onClick={skipRecruiter}>Пропустить</button>}</div>}
     <section className="table">
       <aside className="side-panel"><div className={`deck-zone ${game.phase === 'draw-deck' ? 'ready' : ''}`}><Card faceDown onClick={drawDeck} /><b>{game.deck.length}</b><span>колода</span><small>Возьми карту</small></div>{logOpen && <div className="chronicle"><p>Хроника <i>{game.log.length}</i></p>{game.log.map((line, index) => <small key={`${line}-${index}`}>{line}</small>)}</div>}</aside>
       <div className="board"><section className={`crossroads ${game.phase === 'draw-crossroads' ? 'ready' : ''}`}><div className="section-title"><span>Перекрёсток</span><small>{game.pendingChoice?.ability === 'jester' ? 'выбери карту для копирования' : 'выбери одну карту после колоды'}</small></div><div className="crossroad-cards">{game.crossroads.map((card, index) => <Card card={card} key={card.uid} targetable={canChooseCrossroad(card)} onClick={() => game.pendingChoice?.ability === 'jester' ? chooseCrossroad(index) : drawCrossroads(index)} />)}</div></section><section className="cities" style={{ '--player-count': game.players.length }}>{game.players.map((player) => <City key={player.id} player={player} active={player.id === game.current} selectedCard={selected} onPlace={() => place(player.id)} infection={game.infection} plaguePreview={plaguePreview} setPlaguePreview={setPlaguePreview} residentTarget={(resident) => canChooseResident(player.id, resident)} onResidentTarget={chooseResident} />)}</section></div>
