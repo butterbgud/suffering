@@ -70,7 +70,7 @@ function City({ player, active, selectedCard, onPlace, infection, plaguePreview,
     <div className="lanes">
       {estates.map((estate) => <div className="lane" key={estate}>
         <label>{estate}</label>
-        <div className="residents">{player.city.filter((card) => card.estate === estate).map((card) => <Card card={card} small key={card.uid} targetable={residentTarget?.(card)} onClick={() => residentTarget?.(card) && onResidentTarget(player.id, card)} />)}</div>
+        <div className="residents">{player.city.filter((card) => card.estate === estate).map((card) => card.id === 'guard' ? <div className="guard-stack" key={card.uid}>{player.imprisoned?.length > 0 && <div className="guard-prisoner"><Card faceDown small /></div>}<div className="guard-front"><Card card={card} small targetable={residentTarget?.(card)} onClick={() => residentTarget?.(card) && onResidentTarget(player.id, card)} /></div></div> : <Card card={card} small key={card.uid} targetable={residentTarget?.(card)} onClick={() => residentTarget?.(card) && onResidentTarget(player.id, card)} />)}</div>
       </div>)}
     </div>
   </section>;
@@ -343,11 +343,24 @@ export default function App() {
   function discardResident(next, player, resident, reason) {
     player.city = player.city.filter((item) => item.uid !== resident.uid);
     if (resident.id === 'guard' && player.imprisoned?.length) {
-      next.deck.push(...player.imprisoned);
-      player.imprisoned = [];
+      revealGuardCard(next, player);
     }
     next.discard.push(resident);
     next.log.unshift(`${reason}: «${resident.title}» отправляется в сброс.`);
+  }
+
+  function revealGuardCard(next, player) {
+    const hidden = player.imprisoned?.shift();
+    if (!hidden) return;
+    next.log.unshift(`✦ Стражник сброшен: карта «${hidden.title}» раскрывается и срабатывает.`);
+    if (hidden.epidemic) {
+      const syphilisBoost = hidden.id === 'syphilis' && player.city.some((resident) => ['harlot', 'devka'].includes(resident.id));
+      next.infection = { card: hidden, host: player.id, origin: player.id, power: syphilisBoost ? 2 : hidden.victims };
+      if (syphilisBoost) next.log.unshift('✦ Раскрытая Сифилис начинает с двух жертв.');
+    } else {
+      player.city.push(hidden);
+      resolveEntryAbility(next, player.id, player.id, hidden);
+    }
   }
 
   function strongestResident(player, exceptUid) {
