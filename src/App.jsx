@@ -415,8 +415,11 @@ export default function App() {
     if (!resident) return 0;
     player.city = player.city.filter((item) => item.uid !== resident.uid);
     next.discard.push(resident);
-    const available = next.crusadeRound <= 3 ? next.crusadePool : 0;
-    const sent = Math.min(Math.max(0, points), available);
+    // The resident's full value counts toward the final score, even when it
+    // crosses the remaining Holy Land threshold. Only the shared pool floors
+    // at zero; otherwise the threshold-crossing player would be unfairly
+    // reduced to the last single point.
+    const sent = Math.max(0, points);
     player.crusade += sent;
     if (next.crusadeRound <= 3) next.crusadePool = Math.max(0, next.crusadePool - sent);
     resolveCrusadeRound(next);
@@ -477,7 +480,11 @@ export default function App() {
       const recruits = target.city.filter((resident) => resident.uid !== card.uid && resident.crusade <= 0 && resident.id !== 'corpse');
       if (owner.bot) {
         const roundBefore = next.crusadeRound;
-        const sent = recruits.reduce((total, resident) => total + sendResidentOnCrusade(next, target, resident, Math.max(0, resident.vp)), 0);
+        let sent = 0;
+        for (const resident of recruits) {
+          sent += sendResidentOnCrusade(next, target, resident, Math.max(0, resident.vp));
+          if (next.crusadeRound !== roundBefore) break;
+        }
         if (sent) activate(`отправляет мирных жителей в Поход за ${sent} очк.`);
         if (next.crusadeRound !== roundBefore) activate('Святая Земля достигла лимита — распределена Реликвия.');
       } else if (recruits.length) {
