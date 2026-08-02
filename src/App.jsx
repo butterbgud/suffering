@@ -231,7 +231,12 @@ export default function App() {
     let sent = 0;
     const departures = next.players.filter((player) => !local || player.id === ownerId).map((player) => {
       const cityHasWomanOrAdaptable = player.city.some((card) => WOMEN.has(card.id) || card.id === 'adaptable');
-      return { player, pilgrims: player.city.filter((card) => card.crusade > 0 && !(card.id === 'templar' && cityHasWomanOrAdaptable)) };
+      let pilgrims = player.city.filter((card) => card.crusade > 0 && !(card.id === 'templar' && cityHasWomanOrAdaptable));
+      const knight = player.city.find((card) => card.id === 'knight');
+      const squire = player.city.find((card) => card.id === 'weapon_bearer');
+      const otherPilgrims = pilgrims.filter((card) => !['knight', 'weapon_bearer'].includes(card.id));
+      if (knight && squire && !otherPilgrims.length) pilgrims = [squire];
+      return { player, pilgrims };
     });
     departures.forEach(({ player, pilgrims }) => {
       if (!pilgrims.length) return;
@@ -419,7 +424,11 @@ export default function App() {
       const botBurden = owner.bot && owner.city.filter((resident) => resident.uid !== card.uid && resident.vp < 0).sort((a, b) => a.vp - b.vp)[0];
       const victim = botBurden ?? strongestResident(target, card.uid);
       const victimCity = botBurden ? owner : target;
-      if (victim) discardResident(next, victimCity, victim, `✦ Инквизитор ${owner.name} казнит жителя`);
+      if (victim) {
+        const wasHeretic = victim.id.startsWith('heretic-');
+        discardResident(next, victimCity, victim, `✦ Инквизитор ${owner.name} казнит жителя`);
+        if (wasHeretic) { const drawn = next.deck.shift(); if (drawn) owner.hand.push(drawn); activate('убивает Еретика и берёт карту.'); }
+      }
       else activate('не находит жертву.');
     } else if (card.id === 'episcop') {
       activate('созывает общий Крестовый поход.'); triggerCrusade(next, targetId);
