@@ -336,7 +336,12 @@ export default function App() {
     if (card.id === 'witch') {
       const drawn = next.deck.splice(0, 2);
       drawn.forEach((drawnCard) => target.hand.push(drawnCard));
-      next.forcedPlay = drawn.length ? { playerId: targetId, cardIds: drawn.map((drawnCard) => drawnCard.uid) } : null;
+      const resumeCurrent = next.current === targetId ? null : next.current;
+      next.forcedPlay = drawn.length ? { playerId: targetId, cardIds: drawn.map((drawnCard) => drawnCard.uid), resumeCurrent } : null;
+      if (drawn.length && resumeCurrent !== null) {
+        next.current = targetId;
+        next.phase = 'play';
+      }
       activate(`${target.name} получает ${drawn.length} карты из колоды и должен разыграть их немедленно.`);
     }
     if (card.id === 'lady') {
@@ -473,6 +478,7 @@ export default function App() {
     const owner = next.players[ownerId];
     const target = next.players[targetId];
     if (next.forcedPlay?.playerId === ownerId && !next.forcedPlay.cardIds.includes(card.uid)) return;
+    const forcedResumeCurrent = next.forcedPlay?.playerId === ownerId ? next.forcedPlay.resumeCurrent : null;
     const handIndex = owner.hand.findIndex((item) => item.uid === card.uid);
     if (handIndex < 0) return;
     const needsDiscardForOwnCity = ['lord', 'knight'].includes(card.id) && targetId === ownerId;
@@ -496,9 +502,15 @@ export default function App() {
     }
     if (next.forcedPlay?.playerId === ownerId) {
       next.forcedPlay.cardIds = next.forcedPlay.cardIds.filter((cardId) => cardId !== card.uid);
-      if (!next.forcedPlay.cardIds.length) next.forcedPlay = null;
+      if (!next.forcedPlay.cardIds.length) {
+        next.forcedPlay = null;
+        if (forcedResumeCurrent !== null) {
+          next.current = forcedResumeCurrent;
+          next.phase = 'play';
+        }
+      }
     }
-    if (!next.forcedPlay && !owner.hand.length) endTurn(next);
+    if (!next.forcedPlay && !owner.hand.length && next.current === ownerId) endTurn(next);
   }
 
   useEffect(() => {
