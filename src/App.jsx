@@ -21,6 +21,7 @@ function freshGame(botCount) {
     infection: null,
     discard: [],
     relicDeck: shuffle([...RELIC_CARDS]),
+    forcedPlay: null,
     crusadePool: CRUSADE_POOL[players.length],
     crusadeLimit: CRUSADE_POOL[players.length],
     crusadeRound: 1,
@@ -157,6 +158,10 @@ export default function App() {
 
   function place(targetId) {
     if (!selected || game.phase !== 'play' || current.bot) return;
+    if (game.forcedPlay?.playerId === game.current && !game.forcedPlay.cardIds.includes(selected.uid)) {
+      say('Сначала разыграй две карты, полученные от Ведьмы.');
+      return;
+    }
     const needsDiscardForOwnCity = ['lord', 'knight'].includes(selected.id) && targetId === game.current;
     if (needsDiscardForOwnCity && current.hand.filter((card) => card.uid !== selected.uid).length === 0) {
       say(`«${selected.title}» вторым можно поселить только в чужой город.`);
@@ -266,6 +271,12 @@ export default function App() {
     const owner = next.players[ownerId];
     const activate = (text) => next.log.unshift(`✦ ${card.title}: ${text}`);
     const mutilator = target.city.find((resident) => resident.id === 'mutilator' && resident.uid !== card.uid);
+    if (card.id === 'witch') {
+      const drawn = next.deck.splice(0, 2);
+      drawn.forEach((drawnCard) => target.hand.push(drawnCard));
+      next.forcedPlay = drawn.length ? { playerId: targetId, cardIds: drawn.map((drawnCard) => drawnCard.uid) } : null;
+      activate(`${target.name} получает ${drawn.length} карты из колоды и должен разыграть их немедленно.`);
+    }
     if (WOMEN.has(card.id) && mutilator) {
       const destination = Array.from({ length: next.players.length - 1 }, (_, step) => next.players[(targetId + step + 1) % next.players.length])
         .find((player) => !player.city.some((resident) => WOMEN.has(resident.id)));
@@ -322,6 +333,7 @@ export default function App() {
   function play(next, ownerId, card, targetId) {
     const owner = next.players[ownerId];
     const target = next.players[targetId];
+    if (next.forcedPlay?.playerId === ownerId && !next.forcedPlay.cardIds.includes(card.uid)) return;
     const handIndex = owner.hand.findIndex((item) => item.uid === card.uid);
     if (handIndex < 0) return;
     const needsDiscardForOwnCity = ['lord', 'knight'].includes(card.id) && targetId === ownerId;
@@ -343,7 +355,11 @@ export default function App() {
       next.log.unshift(`${owner.name} селит «${card.title}» в городе ${target.name}.`);
       resolveEntryAbility(next, ownerId, targetId, card);
     }
-    if (!owner.hand.length) endTurn(next);
+    if (next.forcedPlay?.playerId === ownerId) {
+      next.forcedPlay.cardIds = next.forcedPlay.cardIds.filter((cardId) => cardId !== card.uid);
+      if (!next.forcedPlay.cardIds.length) next.forcedPlay = null;
+    }
+    if (!next.forcedPlay && !owner.hand.length) endTurn(next);
   }
 
   useEffect(() => {
@@ -359,7 +375,9 @@ export default function App() {
         refillCrossroads(next);
         next.phase = 'play';
       } else if (next.phase === 'play') {
-        const card = bot.hand[0];
+        if (next.forcedPlay && next.forcedPlay.playerId !== bot.id) return;
+        const forcedCard = next.forcedPlay?.playerId === bot.id && bot.hand.find((item) => next.forcedPlay.cardIds.includes(item.uid));
+        const card = forcedCard || bot.hand[0];
         const weakest = [...next.players].sort((a, b) => score(a) - score(b))[0];
         const leaderWithoutPlague = [...next.players].filter((player) => player.id !== bot.id && next.infection?.host !== player.id).sort((a, b) => score(b) - score(a))[0];
         const isSecondSelfPlay = ['lord', 'knight'].includes(card.id) && bot.hand.filter((item) => item.uid !== card.uid).length === 0;
@@ -380,7 +398,7 @@ export default function App() {
     <section className="table">
       <aside className="side-panel"><div className={`deck-zone ${game.phase === 'draw-deck' ? 'ready' : ''}`}><Card faceDown onClick={drawDeck} /><b>{game.deck.length}</b><span>колода</span><small>Возьми карту</small></div>{logOpen && <div className="chronicle"><p>Хроника <i>{game.log.length}</i></p>{game.log.map((line, index) => <small key={`${line}-${index}`}>{line}</small>)}</div>}</aside>
       <div className="board"><section className={`crossroads ${game.phase === 'draw-crossroads' ? 'ready' : ''}`}><div className="section-title"><span>Перекрёсток</span><small>выбери одну карту после колоды</small></div><div className="crossroad-cards">{game.crossroads.map((card, index) => <Card card={card} key={card.uid} onClick={() => drawCrossroads(index)} />)}</div></section><section className="cities">{game.players.map((player) => <City key={player.id} player={player} active={player.id === game.current} selectedCard={selected} onPlace={() => place(player.id)} infection={game.infection} />)}</section></div>
-      <aside className="side-panel hand-panel"><div className="section-title"><span>Твоя рука</span><small>{game.players[0].hand.length} карт</small></div><div className="hand">{game.players[0].hand.map((card) => <Card card={card} key={card.uid} selected={selected?.uid === card.uid} onClick={() => game.current === 0 && game.phase === 'play' && setSelected(card)} />)}</div><p className="hint">{notice || (selected ? `«${selected.title}»: ${selected.effect} Нажми на город — мгновенный эффект будет отмечен в Хронике.` : 'Твои карты появятся здесь.')}</p></aside>
+      <aside className="side-panel hand-panel"><div className="section-title"><span>Твоя рука</span><small>{game.players[0].hand.length} карт</small></div><div className="hand">{game.players[0].hand.map((card) => <Card card={card} key={card.uid} selected={selected?.uid === card.uid} onClick={() => game.current === 0 && game.phase === 'play' && setSelected(card)} />)}</div><p className="hint">{notice || (game.forcedPlay?.playerId === 0 ? `Ведьма заставляет разыграть ещё ${game.forcedPlay.cardIds.length} карты немедленно.` : selected ? `«${selected.title}»: ${selected.effect} Нажми на город — мгновенный эффект будет отмечен в Хронике.` : 'Твои карты появятся здесь.')}</p></aside>
     </section>
     {winner && <div className="ending"><div><p className="eyebrow">летописец поставил точку</p><h2>{winner.name} побеждает</h2><strong>{score(winner)} победных очков</strong><div className="scoreboard">{game.players.map((player) => <span key={player.id}><b>{player.name}</b><i>{score(player)} ПО · {player.crusade} ✠ · {player.relics.length} реликв.</i></span>)}</div><div className="graph"><p>Победные очки по ходам</p><ScoreChart history={game.history} players={game.players} /></div><button onClick={() => setGame(freshGame(botCount))}>Ещё один год страданий</button></div></div>}
     {bugOpen && <div className="bug-modal" onClick={() => bugStatus !== 'sending' && setBugOpen(false)}><form onSubmit={(event) => { event.preventDefault(); submitBug(); }} onClick={(event) => event.stopPropagation()}><h2>Сообщить об ошибке</h2><p>К отчёту будет приложена последняя хроника партии.</p><textarea autoFocus value={bugText} onChange={(event) => setBugText(event.target.value)} placeholder="Что произошло? (необязательно)" maxLength="1200" />{bugStatus === 'sent' ? <strong className="bug-success">Отчёт отправлен. Спасибо!</strong> : bugStatus === 'failed' ? <strong className="bug-failed">Не удалось отправить отчёт.</strong> : null}<div><button type="button" onClick={() => setBugOpen(false)} disabled={bugStatus === 'sending'}>Отмена</button><button className="start" type="submit" disabled={bugStatus === 'sending'}>Отправить</button></div></form></div>}
