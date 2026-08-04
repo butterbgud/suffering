@@ -697,7 +697,8 @@ export default function App() {
       } else if (next.phase === 'play') {
         if (next.forcedPlay && next.forcedPlay.playerId !== bot.id) return;
         const forcedCard = next.forcedPlay?.playerId === bot.id && bot.hand.find((item) => next.forcedPlay.cardIds.includes(item.uid));
-        const card = forcedCard || bot.hand[0];
+        const powerfulSelfCard = bot.hand.find((item) => ['lord', 'knight'].includes(item.id) && bot.hand.some((other) => other.uid !== item.uid));
+        const card = forcedCard || powerfulSelfCard || bot.hand[0];
         const highestScoringOpponent = [...next.players].filter((player) => player.id !== bot.id).sort((a, b) => score(b) - score(a))[0];
         const victoryLeader = [...next.players].sort((a, b) => score(b) - score(a))[0];
         const targetLeader = victoryLeader.id === bot.id ? highestScoringOpponent : victoryLeader;
