@@ -50,7 +50,7 @@ function residentCount(player) {
   return player.city.filter((card) => card.id !== 'corpse').length;
 }
 
-const WOMEN = new Set(['lady', 'harlot', 'devka', 'witch']);
+const WOMEN = new Set(['lady', 'harlot', 'whore', 'devka', 'witch']);
 const epidemicPriority = (card, infection) => card.id === 'syphilis'
   ? (infection?.syphilisBoosted ? 'усиленная эпидемия' : 'обычная эпидемия')
   : ({ cholera: 'сначала простолюдины', leprosy: 'сначала священники', malaria: 'сначала дворяне', black_pox: 'сначала высокий иммунитет', bubonic_plague: 'по 2 жертвы в первый ход' }[card.id] || 'обычный порядок');
@@ -622,6 +622,10 @@ export default function App() {
       const victim = target.city.find((resident) => resident.uid !== card.uid && ['lady', 'harlot', 'devka'].includes(resident.id));
       if (victim) discardResident(next, target, victim, '✦ Младенец изгоняет женщину');
       else activate('не находит Леди или Девки в городе.');
+    } else if (card.id === 'whore') {
+      const victim = target.city.find((resident) => resident.uid !== card.uid && WOMEN.has(resident.id));
+      if (victim) discardResident(next, target, victim, '✦ Шлюха сбрасывает женщину');
+      else activate('не находит женщину в городе.');
     } else if (card.id === 'crossbowman') {
       const eligible = next.crossroads.filter((item) => !item.epidemic);
       if (!eligible.length) activate('не находит персонажей на Перекрёстке.');
