@@ -6,7 +6,7 @@ button { font: inherit; }
 body { margin: 0; min-width: 320px; background: #17100c; }
 .welcome { min-height: 100vh; display: grid; place-items: center; padding: 24px; overflow: hidden; background: linear-gradient(#170d09a8, #170d09c4), url('/assets/ui/MS_bp.webp') center / cover fixed; }
 .welcome::before { content: ''; position: fixed; inset: 0; pointer-events: none; opacity: .16; background: radial-gradient(circle at 50% 20%, #b57b3780, transparent 36%); }
-.welcome-card { width: min(650px, 100%); position: relative; padding: clamp(30px, 6vw, 70px); text-align: center; border: 1px solid #bc8a4e66; background: #1f150ee0; box-shadow: 0 36px 100px #000a, inset 0 0 100px #8c511318; }
+.welcome-card { width: min(650px, 100%); position: relative; padding: clamp(30px, 6vw, 70px); text-align: center; }
 .eyebrow { margin: 0 0 9px; color: #d49c51; font: 700 10px/1.4 Unbounded, sans-serif; text-transform: uppercase; letter-spacing: .19em; }
 h1, h2 { font-weight: 400; margin: 0; line-height: .85; text-wrap: balance; }
 .welcome h1 { color: #f5d498; font-size: clamp(60px, 13vw, 115px); text-shadow: 2px 3px #5c2d16; }
@@ -34,11 +34,13 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .chronicle { max-height: calc(100vh - 275px); overflow-y: auto; scrollbar-color: #c38a48 #140b08; scrollbar-width: thin; }.chronicle::-webkit-scrollbar { width: 7px; }.chronicle::-webkit-scrollbar-track { background: #140b08; }.chronicle::-webkit-scrollbar-thumb { background: #a76d35; border-radius: 8px; }
 .score-chart { margin-top: 10px; }.chart-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 12px; margin-bottom: 8px; color: #dec08b; font-size: 12px; }.chart-legend span { display: inline-flex; align-items: center; gap: 5px; }.chart-legend i { width: 9px; height: 9px; border-radius: 50%; }.score-chart svg { width: 100%; height: auto; overflow: visible; }.score-chart line { stroke: #8f623833; stroke-width: 1; }.score-chart .chart-axis { stroke: #b7844a; }.score-chart text { fill: #b99464; font: 11px 'IM Fell English', serif; text-anchor: end; }.score-chart .chart-turn { text-anchor: middle; }.score-chart .chart-label { fill: #d1a263; font-size: 12px; }.chart-series polyline { fill: none; stroke-width: 2.7; stroke-linejoin: round; stroke-linecap: round; }.chart-series circle { stroke: #25130b; stroke-width: 1.5; }
 .welcome h1, header h1 { display: none; }
+.lobby-meta { position: fixed; z-index: 2; top: 18px; left: 20px; display: grid; gap: 7px; justify-items: start; }
 .lobby-options { display: flex; justify-content: space-between; gap: 18px; margin: 0 0 28px; padding-bottom: 16px; border-bottom: 1px solid #82562d66; }
 .option-group { display: grid; gap: 7px; color: #c99f64; font: 700 9px Unbounded, sans-serif; text-transform: uppercase; letter-spacing: .09em; }
 .segmented { display: flex; gap: 4px; }
 .segmented button { min-width: 42px; padding: 8px 9px; color: #c49a62; border: 1px solid #80542f; background: #1c110ddd; cursor: pointer; font: 700 10px Unbounded, sans-serif; }
 .segmented button.picked { color: #1c110a; border-color: #e3aa58; background: #dfaa5a; }
+.lobby-speed { justify-items: center; margin: -2px 0 15px; }
 .brand { display: grid; gap: 5px; justify-items: start; }
 .build-version { color: #b78a5a; font: 10px Unbounded, sans-serif; letter-spacing: .08em; }
 .header-actions { display: flex; gap: 8px; align-items: start; }
@@ -79,6 +81,6 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .guard-front { position: relative; z-index: 1; }
 @media (max-width: 980px) { .cities { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 570px) { .cities { grid-template-columns: 1fr; } }
-@media (max-width: 570px) { .lobby-options { align-items: start; gap: 10px; } .option-group { font-size: 8px; } }
+@media (max-width: 570px) { .lobby-meta { top: 11px; left: 11px; } .option-group { font-size: 8px; } .welcome-card { padding-top: 70px; } }
 @keyframes draw-pulse { 50% { box-shadow: 0 0 0 4px #f3ca7733, 0 0 34px #e3a851, 3px 5px 10px #000a; } }
 @keyframes draw-pulse-text { 50% { text-shadow: 0 0 18px #f3ca77; } }
