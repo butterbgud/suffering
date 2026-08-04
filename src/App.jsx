@@ -739,15 +739,17 @@ export default function App() {
         const avoidEpiscop = episcopWouldAwardRelicToOther(next, bot.id);
         const powerfulSelfCard = bot.hand.find((item) => ['lord', 'knight'].includes(item.id) && bot.hand.some((other) => other.uid !== item.uid));
         const safeCard = avoidEpiscop ? bot.hand.find((item) => item.id !== 'episcop') : bot.hand[0];
-        const card = forcedCard || powerfulSelfCard || safeCard || bot.hand[0];
+        const scoringCard = bot.hand.find((item) => item.id !== 'episcop' && !item.epidemic && item.vp >= 0);
+        const card = forcedCard || powerfulSelfCard || scoringCard || safeCard || bot.hand[0];
         const highestScoringOpponent = [...next.players].filter((player) => player.id !== bot.id).sort((a, b) => score(b) - score(a))[0];
         const victoryLeader = [...next.players].sort((a, b) => score(b) - score(a))[0];
         const targetLeader = victoryLeader.id === bot.id ? highestScoringOpponent : victoryLeader;
         const leaderWithoutPlague = [...next.players].filter((player) => player.id !== bot.id && next.infection?.host !== player.id).sort((a, b) => score(b) - score(a))[0];
         const isSecondSelfPlay = ['lord', 'knight'].includes(card.id) && bot.hand.filter((item) => item.uid !== card.uid).length === 0;
+        const attackLeader = next.history.length > 4 && targetLeader && residentCount(targetLeader) >= 5;
         const targetId = card.id === 'plague_doc'
           ? (bot.city.some((resident) => resident.id === 'devil') ? bot.id : (leaderWithoutPlague?.id ?? targetLeader.id))
-          : isSecondSelfPlay ? targetLeader.id : card.epidemic ? (leaderWithoutPlague?.id ?? targetLeader.id) : (card.vp < 0 ? targetLeader.id : bot.id);
+          : isSecondSelfPlay ? targetLeader.id : card.epidemic ? (leaderWithoutPlague?.id ?? targetLeader.id) : (card.vp < 0 && attackLeader ? targetLeader.id : bot.id);
         play(next, bot.id, card, targetId);
       }
     }), game.gameSpeed === 10 ? 5000 : 2000);
