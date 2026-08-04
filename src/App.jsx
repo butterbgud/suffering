@@ -735,6 +735,20 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [game, current?.bot, current?.id]);
 
+  useEffect(() => {
+    if (!game || current?.bot || game.ended || game.phase !== 'draw-deck') return undefined;
+    const timer = setTimeout(() => {
+      update((next) => {
+        const card = next.deck.shift();
+        if (!card) return finish(next);
+        next.players[next.current].hand.push(card);
+        next.phase = 'draw-crossroads';
+      });
+      setNotice('Карта из колоды взята. Теперь выбери карту с Перекрёстка.');
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [game, current?.bot, current?.id, game?.phase]);
+
   if (!game) {
     const english = language === 'en';
     return <main className="welcome"><div className="lobby-meta"><div className="option-group"><span>{english ? 'Language' : 'Язык'}</span><div className="segmented"><button className={language === 'ru' ? 'picked' : ''} onClick={() => setLanguage('ru')}>RU</button><button className={language === 'en' ? 'picked' : ''} onClick={() => setLanguage('en')}>EN</button></div></div><small className="build-version">#{BUILD_VERSION}</small></div><div className="welcome-card"><p className="eyebrow">{english ? 'A tabletop game, rebuilt from the ashes' : 'Настольная игра, восставшая из пепла'}</p><p className="lede">{english ? 'Medieval city-building, if human life cost roughly half a card.' : 'Средневековое градостроительство, если человеческая жизнь стоила примерно пол-карты.'}</p><div className="bot-picker"><span>{english ? 'Opponents' : 'Соперники'}</span>{[1, 2, 3, 4, 5].map((count) => <button key={count} className={botCount === count ? 'picked' : ''} onClick={() => setBotCount(count)}>{count}</button>)}</div><div className="lobby-speed option-group"><span>{english ? 'Game speed' : 'Скорость игры'}</span><div className="segmented"><button className={gameSpeed === 5 ? 'picked' : ''} onClick={() => setGameSpeed(5)}>5s</button><button className={gameSpeed === 10 ? 'picked' : ''} onClick={() => setGameSpeed(10)}>10s</button></div></div><button className="start" onClick={() => setGame(freshGame(botCount, language, gameSpeed))}>{english ? 'Found a city' : 'Основать город'} <span>→</span></button><p className="rules">{english ? 'Each turn: deck → crossroads → play everything. Epidemics move through cities and grow worse when they return home.' : 'Каждый ход: колода → перекрёсток → разыграть всё. Эпидемии ходят по городам и становятся злее, когда возвращаются домой.'}</p></div></main>;
