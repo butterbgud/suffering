@@ -17,7 +17,7 @@ function freshGame(botCount, language = 'ru', gameSpeed = 5) {
     players,
     current: 0,
     phase: 'draw-deck',
-    infection: null,
+    infections: [],
     discard: [],
     relicDeck: shuffle([...RELIC_CARDS]),
     forcedPlay: null,
@@ -104,14 +104,14 @@ function Card({ card, small = false, onClick, onSelect, selected, targetable = f
   </>;
 }
 
-function City({ player, active, selectedCard, onPlace, infection, plaguePreview, setPlaguePreview, residentTarget, onResidentTarget, language = 'ru' }) {
+function City({ player, active, selectedCard, onPlace, infections = [], plaguePreview, setPlaguePreview, residentTarget, onResidentTarget, language = 'ru' }) {
   const estates = ['дворяне', 'священники', 'простолюдины'];
   const english = language === 'en';
   return <section className={`city ${active ? 'active' : ''} ${selectedCard ? 'place-target' : ''}`} onClickCapture={(event) => selectedCard && !event.target.closest('.city-head') && onPlace()}>
     <button className="city-head" onClick={onPlace} disabled={!selectedCard}>
       <span>{player.name} ({score(player)} {english ? 'VP' : 'ПО'} <em className="vp-relic">{relicScore(player)}{english ? 'H' : 'Р'}</em> + <em className="vp-resident">{residentScore(player)}{english ? 'R' : 'Ж'}</em> · {player.crusade} ✠)</span>
     </button>
-    {infection?.host === player.id && <div className="infection" onMouseEnter={() => setPlaguePreview(true)} onMouseLeave={() => setPlaguePreview(false)} onClick={() => setPlaguePreview((open) => !open)} title="Нажмите или наведите для просмотра карты эпидемии"><span>☠</span><strong>{infection.card.title}</strong><em>{infection.power} жертв. · {epidemicPriority(infection.card, infection)}</em>{plaguePreview && <div className="plague-preview"><img src={infection.card.art} alt={infection.card.title} /><b>{infection.card.title}</b><small>{infection.card.effect}</small></div>}</div>}
+    {infections.filter((infection) => infection.host === player.id).map((infection) => <div className="infection" key={infection.card.uid} onMouseEnter={() => setPlaguePreview(true)} onMouseLeave={() => setPlaguePreview(false)} onClick={() => setPlaguePreview((open) => !open)} title="Нажмите или наведите для просмотра карты эпидемии"><span>☠</span><strong>{infection.card.title}</strong><em>{infection.power} жертв. · {epidemicPriority(infection.card, infection)}</em>{plaguePreview && <div className="plague-preview"><img src={infection.card.art} alt={infection.card.title} /><b>{infection.card.title}</b><small>{infection.card.effect}</small></div>}</div>)}
     <div className="lanes">
       {estates.map((estate) => <div className="lane" key={estate}>
         <label>{estate}</label>
@@ -269,9 +269,9 @@ export default function App() {
       } else if (choice.ability === 'heretic-science') {
         const destination = adjacentPlayers(next, playerId)[0];
         if (destination) {
-          const infected = next.infection?.host === playerId;
+          const infected = next.infections.some((infection) => infection.host === playerId);
           moveResident(next, victimCity, destination, resident, `✦ Еретик-натуралист перемещает выбранного жителя в город ${destination.name}.`);
-          if (infected) next.infection.host = destination.id;
+          if (infected) next.infections = next.infections.map((infection) => infection.host === playerId ? { ...infection, host: destination.id } : infection);
         }
       } else if (choice.ability === 'inquisitor') {
         const wasHeretic = resident.id.startsWith('heretic-');
@@ -380,8 +380,7 @@ export default function App() {
     while (next.crossroads.length < 3 && next.deck.length) next.crossroads.push(next.deck.shift());
   }
 
-  function resolveEpidemic(next) {
-    const infection = next.infection;
+  function resolveEpidemic(next, infection) {
     if (!infection || infection.host !== next.current) return;
     const city = next.players[infection.host];
     const protectedIds = new Set(['leper', 'cat', 'corpse']);
@@ -404,15 +403,21 @@ export default function App() {
     if (!city.city.length || !victims.length) {
       next.log.unshift(`${infection.card.title} погасла в городе ${city.name}.`);
       next.discard.push(infection.card);
-      next.infection = null;
+      next.infections = next.infections.filter((item) => item.card.uid !== infection.card.uid);
       return;
     }
     next.log.unshift(`${infection.card.title}: ${victims.map((card) => card.title).join(', ')} покидают город ${city.name}.`);
-    next.infection = { ...infection, host: (infection.host + 1) % next.players.length, power: infection.host === infection.origin ? infection.power + 1 : infection.power };
+    next.infections = next.infections.map((item) => item.card.uid === infection.card.uid
+      ? { ...item, host: (item.host + 1) % next.players.length, power: item.host === item.origin ? item.power + 1 : item.power }
+      : item);
+  }
+
+  function resolveEpidemics(next) {
+    next.infections.filter((infection) => infection.host === next.current).forEach((infection) => resolveEpidemic(next, infection));
   }
 
   function endTurn(next) {
-    resolveEpidemic(next);
+    resolveEpidemics(next);
     if (next.players.some((player) => residentCount(player) >= 10)) {
       recordHistory(next, 'конец');
       next.ended = true;
@@ -496,7 +501,7 @@ export default function App() {
     next.log.unshift(`✦ Стражник сброшен: карта «${hidden.title}» раскрывается и срабатывает.`);
     if (hidden.epidemic) {
       const syphilisBoost = hidden.id === 'syphilis' && player.city.some((resident) => ['harlot', 'devka'].includes(resident.id));
-      next.infection = { card: hidden, host: player.id, origin: player.id, power: syphilisBoost ? 2 : hidden.victims, syphilisBoosted: syphilisBoost };
+      next.infections.push({ card: hidden, host: player.id, origin: player.id, power: syphilisBoost ? 2 : hidden.victims, syphilisBoosted: syphilisBoost });
       if (syphilisBoost) next.log.unshift('✦ Раскрытая Сифилис начинает с двух жертв.');
     } else {
       player.city.push(hidden);
@@ -658,7 +663,7 @@ export default function App() {
       const resident = strongestResident(target, card.uid);
       const destination = adjacentPlayers(next, targetId)[0];
       if (resident && destination) {
-        if (owner.bot) { const epidemic = next.infection?.host === targetId; moveResident(next, target, destination, resident, `✦ Еретик-натуралист перемещает «${resident.title}» в город ${destination.name}.`); if (epidemic) next.infection.host = destination.id; }
+        if (owner.bot) { const epidemic = next.infections.some((infection) => infection.host === targetId); moveResident(next, target, destination, resident, `✦ Еретик-натуралист перемещает «${resident.title}» в город ${destination.name}.`); if (epidemic) next.infections = next.infections.map((infection) => infection.host === targetId ? { ...infection, host: destination.id } : infection); }
         else { next.pendingChoice = { ability: card.id, actorId: ownerId, targetId, cardUid: card.uid }; next.phase = 'choice'; activate('выбери жителя для перемещения.'); }
       }
     } else if (card.id === 'heretic-alch') {
@@ -682,8 +687,9 @@ export default function App() {
       } else discardResident(next, target, mutilator, '✦ Увещеватель не находит город без женщины');
     }
     if (card.id === 'plague_doc') {
-      if (next.infection?.host === targetId) {
-        next.discard.push(next.infection.card); next.infection = null;
+      const infection = next.infections.find((item) => item.host === targetId);
+      if (infection) {
+        next.discard.push(infection.card); next.infections = next.infections.filter((item) => item.card.uid !== infection.card.uid);
         activate(`лечит эпидемию в городе ${target.name}.`);
       } else activate(`в городе ${target.name} нет эпидемии — лечение не требуется.`);
     } else if (card.id === 'inquisitor') {
@@ -762,7 +768,7 @@ export default function App() {
     }
     if (card.epidemic) {
       const syphilisBoost = card.id === 'syphilis' && target.city.some((resident) => ['harlot', 'devka'].includes(resident.id));
-      next.infection = { card, host: targetId, origin: targetId, power: syphilisBoost ? 2 : card.victims, syphilisBoosted: syphilisBoost };
+      next.infections.push({ card, host: targetId, origin: targetId, power: syphilisBoost ? 2 : card.victims, syphilisBoosted: syphilisBoost });
       next.log.unshift(`${owner.name} приносит «${card.title}» в город ${target.name}.`);
       if (syphilisBoost) next.log.unshift('✦ Сифилис начинает с двух жертв: в исходном городе есть Девка или Распутная девка.');
     } else {
@@ -816,7 +822,7 @@ export default function App() {
         const highestScoringOpponent = [...next.players].filter((player) => player.id !== bot.id).sort((a, b) => score(b) - score(a))[0];
         const victoryLeader = [...next.players].sort((a, b) => score(b) - score(a))[0];
         const targetLeader = victoryLeader.id === bot.id ? highestScoringOpponent : victoryLeader;
-        const leaderWithoutPlague = [...next.players].filter((player) => player.id !== bot.id && next.infection?.host !== player.id).sort((a, b) => score(b) - score(a))[0];
+        const leaderWithoutPlague = [...next.players].filter((player) => player.id !== bot.id && !next.infections.some((infection) => infection.host === player.id)).sort((a, b) => score(b) - score(a))[0];
         const isSecondSelfPlay = ['lord', 'knight'].includes(card.id) && bot.hand.filter((item) => item.uid !== card.uid).length === 0;
         const attackLeader = next.history.length > 4 && targetLeader && residentCount(targetLeader) >= 5;
         const targetId = card.id === 'plague_doc'
@@ -851,7 +857,7 @@ export default function App() {
   return <main className="game-shell">
     <header><div className="brand"><small className="build-version">#{BUILD_VERSION}</small><div className="header-actions"><button className="log-toggle" title="Показать/скрыть хронику" aria-label="Показать/скрыть хронику" onClick={() => setLogOpen((open) => !open)}>Л</button><button className="view-toggle" title="Переключить вид городов" aria-label="Переключить вид городов" onClick={() => setViewMode((mode) => mode === 'overview' ? 'wheel' : 'overview')}>{viewMode === 'overview' ? '◉' : '▦'}</button><button className="report-button" title="Сообщить об ошибке" aria-label="Сообщить об ошибке" onClick={() => { setBugStatus(''); setBugOpen(true); }}>{game.language === 'en' ? 'B' : 'Б'}</button></div></div><div className="crusade-meter"><span>Святая земля · поход {Math.min(game.crusadeRound, 3)}/3</span><strong>{game.crusadeRound <= 3 ? game.crusadePool : 'захвачена'} {game.crusadeRound <= 3 && <small>/ {game.crusadeLimit}</small>}</strong><i style={{ width: `${game.crusadeRound <= 3 ? (game.crusadePool / game.crusadeLimit) * 100 : 0}%` }} /></div></header>
     {game.pendingChoice && <div className="resident-choice"><strong>{game.pendingChoice.ability === 'heretic-alch' ? 'Еретик-алхимик' : game.pendingChoice.ability === 'heretic-science' ? 'Еретик-натуралист' : game.pendingChoice.ability === 'inquisitor' ? 'Инквизитор' : game.pendingChoice.ability === 'recruit' ? 'Рекрутёр' : game.pendingChoice.ability === 'hare' ? 'Заяц' : game.pendingChoice.ability === 'possesed' ? 'Одержимый' : game.pendingChoice.ability === 'crossbowman' ? 'Арбалетчик' : 'Шут'} требует выбора</strong><span>{game.pendingChoice.ability === 'heretic-alch' ? 'Нажми на жителя, которого уничтожить.' : game.pendingChoice.ability === 'heretic-science' ? 'Нажми на жителя, которого переместить.' : game.pendingChoice.ability === 'inquisitor' ? 'Нажми на жителя в своём городе для казни.' : game.pendingChoice.ability === 'recruit' ? 'Нажми на мирного жителя, чтобы отправить его в Поход, или пропусти.' : game.pendingChoice.ability === 'hare' ? 'Нажми на жителя, которого обменять.' : game.pendingChoice.ability === 'possesed' ? 'Нажми на жителя, чью способность повторить.' : game.pendingChoice.ability === 'crossbowman' ? 'Нажми на карту Перекрёстка, которую сбросить.' : 'Нажми на любую карту Перекрёстка, чтобы скопировать её свойство.'}</span>{game.pendingChoice.ability === 'recruit' && <button type="button" onClick={skipRecruiter}>Пропустить</button>}</div>}
-    <section className="table"><div className="play-column"><section className={`draw-module ${game.phase === 'draw-deck' ? 'ready' : ''}`}><div className="crossroad-cards">{viewMode !== 'wheel' && <Card faceDown directClick onClick={drawDeck} />}{game.crossroads.map((card, index) => <Card card={card} key={card.uid} targetable={canChooseCrossroad(card)} selectable={game.phase === 'draw-crossroads' || canChooseCrossroad(card)} selectLabel={game.language === 'en' ? 'Select' : 'Выбрать'} onSelect={() => game.pendingChoice?.ability === 'jester' ? chooseCrossroad(index) : game.pendingChoice?.ability === 'crossbowman' ? chooseCrossbowmanCrossroad(index) : game.pendingChoice?.ability === 'hare' ? chooseHareCrossroad(index) : drawCrossroads(index)} />)}</div></section>{game.current === 0 && viewMode === 'overview' && <aside className="side-panel hand-panel"><div className="section-title"><span>Твоя рука</span><small>{game.players[0].hand.length} карт</small></div><div className="hand">{game.players[0].hand.map((card) => <Card card={card} key={card.uid} selected={selected?.uid === card.uid} selectable={game.current === 0 && game.phase === 'play' && !game.pendingChoice} selectLabel={game.language === 'en' ? 'Select' : 'Выбрать'} onSelect={() => game.current === 0 && game.phase === 'play' && !game.pendingChoice && setSelected(card)} />)}</div><p className="hint">{notice || (game.pendingChoice ? 'Выделенные жители на поле кликабельны.' : game.forcedPlay?.playerId === 0 ? `Ведьма заставляет разыграть ещё ${game.forcedPlay.cardIds.length} карты немедленно.` : selected ? `«${selected.title}»: ${selected.effect} Нажми на город — мгновенный эффект будет отмечен в Хронике.` : 'Твои карты появятся здесь.')}</p></aside>}{viewMode === 'wheel' ? <CityWheel players={game.players} currentId={game.current} wheelPlayer={wheelPlayer} setWheelPlayer={setWheelPlayer} hand={game.players[0].hand} canSelectHand={game.current === 0 && game.phase === 'play' && !game.pendingChoice} onHandSelect={(card) => game.current === 0 && game.phase === 'play' && !game.pendingChoice && setSelected(card)} cityProps={{ language: game.language, selectedCard: selected, onPlace: () => place(wheelPlayer), infection: game.infection, plaguePreview, setPlaguePreview, residentTarget: (resident) => canChooseResident(wheelPlayer, resident), onResidentTarget: chooseResident }} /> : <section className={`cities players-${Math.min(game.players.length, 4)}`} style={{ '--player-count': game.players.length }}>{game.players.map((player) => <City key={player.id} player={player} language={game.language} active={player.id === game.current} selectedCard={selected} onPlace={() => place(player.id)} infection={game.infection} plaguePreview={plaguePreview} setPlaguePreview={setPlaguePreview} residentTarget={(resident) => canChooseResident(player.id, resident)} onResidentTarget={chooseResident} />)}</section>}</div></section>
+    <section className="table"><div className="play-column"><section className={`draw-module ${game.phase === 'draw-deck' ? 'ready' : ''}`}><div className="crossroad-cards">{viewMode !== 'wheel' && <Card faceDown directClick onClick={drawDeck} />}{game.crossroads.map((card, index) => <Card card={card} key={card.uid} targetable={canChooseCrossroad(card)} selectable={game.phase === 'draw-crossroads' || canChooseCrossroad(card)} selectLabel={game.language === 'en' ? 'Select' : 'Выбрать'} onSelect={() => game.pendingChoice?.ability === 'jester' ? chooseCrossroad(index) : game.pendingChoice?.ability === 'crossbowman' ? chooseCrossbowmanCrossroad(index) : game.pendingChoice?.ability === 'hare' ? chooseHareCrossroad(index) : drawCrossroads(index)} />)}</div></section>{game.current === 0 && viewMode === 'overview' && <aside className="side-panel hand-panel"><div className="section-title"><span>Твоя рука</span><small>{game.players[0].hand.length} карт</small></div><div className="hand">{game.players[0].hand.map((card) => <Card card={card} key={card.uid} selected={selected?.uid === card.uid} selectable={game.current === 0 && game.phase === 'play' && !game.pendingChoice} selectLabel={game.language === 'en' ? 'Select' : 'Выбрать'} onSelect={() => game.current === 0 && game.phase === 'play' && !game.pendingChoice && setSelected(card)} />)}</div><p className="hint">{notice || (game.pendingChoice ? 'Выделенные жители на поле кликабельны.' : game.forcedPlay?.playerId === 0 ? `Ведьма заставляет разыграть ещё ${game.forcedPlay.cardIds.length} карты немедленно.` : selected ? `«${selected.title}»: ${selected.effect} Нажми на город — мгновенный эффект будет отмечен в Хронике.` : 'Твои карты появятся здесь.')}</p></aside>}{viewMode === 'wheel' ? <CityWheel players={game.players} currentId={game.current} wheelPlayer={wheelPlayer} setWheelPlayer={setWheelPlayer} hand={game.players[0].hand} canSelectHand={game.current === 0 && game.phase === 'play' && !game.pendingChoice} onHandSelect={(card) => game.current === 0 && game.phase === 'play' && !game.pendingChoice && setSelected(card)} cityProps={{ language: game.language, selectedCard: selected, onPlace: () => place(wheelPlayer), infections: game.infections, plaguePreview, setPlaguePreview, residentTarget: (resident) => canChooseResident(wheelPlayer, resident), onResidentTarget: chooseResident }} /> : <section className={`cities players-${Math.min(game.players.length, 4)}`} style={{ '--player-count': game.players.length }}>{game.players.map((player) => <City key={player.id} player={player} language={game.language} active={player.id === game.current} selectedCard={selected} onPlace={() => place(player.id)} infections={game.infections} plaguePreview={plaguePreview} setPlaguePreview={setPlaguePreview} residentTarget={(resident) => canChooseResident(player.id, resident)} onResidentTarget={chooseResident} />)}</section>}</div></section>
     {logOpen && <aside className="chronicle chronicle-bottom"><p>Хроника <i>{game.log.length}</i></p>{game.log.map((line, index) => <small key={`${line}-${index}`}>{line}</small>)}</aside>}
     {winner && <div className="ending"><div><p className="eyebrow">летописец поставил точку</p><h2>{winner.name} побеждает</h2><strong>{score(winner)} {game.language === 'en' ? 'VP' : 'ПО'}</strong><div className="scoreboard">{game.players.map((player) => <span key={player.id}><b>{player.name}</b><i>{residentCount(player)} жителей · <b className="score-total">{score(player)} {game.language === 'en' ? 'VP' : 'ПО'}</b> (<em className="vp-relic">{relicScore(player)}{game.language === 'en' ? 'H' : 'Р'}</em> + <em className="vp-resident">{residentScore(player)}{game.language === 'en' ? 'R' : 'Ж'}</em>) · {player.crusade} ✠ · {player.relics.length} реликв.</i></span>)}</div><div className="graph"><p>Победные очки по ходам</p><ScoreChart history={game.history} players={game.players} /></div><button onClick={() => setGame(freshGame(botCount, game.language ?? language, game.gameSpeed ?? gameSpeed))}>Ещё один год страданий</button></div></div>}
     {bugOpen && <div className="bug-modal" onClick={() => bugStatus !== 'sending' && setBugOpen(false)}><form onSubmit={(event) => { event.preventDefault(); submitBug(); }} onClick={(event) => event.stopPropagation()}><h2>Сообщить об ошибке</h2><p>К отчёту будет приложена последняя хроника партии.</p><textarea autoFocus value={bugText} onChange={(event) => setBugText(event.target.value)} placeholder="Что произошло? (необязательно)" maxLength="1200" />{bugStatus === 'sent' ? <strong className="bug-success">Отчёт отправлен. Спасибо!</strong> : bugStatus === 'failed' ? <strong className="bug-failed">Не удалось отправить отчёт.</strong> : null}<div><button type="button" onClick={() => setBugOpen(false)} disabled={bugStatus === 'sending'}>Отмена</button><button className="start" type="submit" disabled={bugStatus === 'sending'}>Отправить</button></div></form></div>}
