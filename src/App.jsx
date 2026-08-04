@@ -4,7 +4,7 @@ import { buildDeck, shuffle } from './cards.js';
 const BUILD_VERSION = __BUILD_VERSION__;
 
 const CRUSADE_POOL = { 2: 16, 3: 16, 4: 20, 5: 23, 6: 25 };
-const RELIC_VP = 7;
+const RELIC_VP = 6;
 const RELIC_CARDS = ['hg1', 'hg2', 'hg3'];
 
 function freshGame(botCount, language = 'ru', gameSpeed = 5) {
@@ -34,6 +34,10 @@ function freshGame(botCount, language = 'ru', gameSpeed = 5) {
 }
 
 function score(player) {
+  return residentScore(player) + relicScore(player);
+}
+
+function residentScore(player) {
   const peasants = player.city.filter((card) => card.id === 'peasant').length;
   const monks = player.city.filter((card) => card.id === 'monk').length;
   const traders = player.city.filter((card) => card.id === 'merchant').length;
@@ -43,7 +47,11 @@ function score(player) {
     - (card.id === 'monk' ? (monks - 1) * 2 : 0)
     - (card.id === 'hermit' ? player.city.length - 1 : 0)
     + (card.id === 'devil' ? negativeResidents * 2 : 0)
-    - (card.id === 'merchant' && traders > 1 ? card.vp : 0), 0) + player.relics.length * RELIC_VP;
+    - (card.id === 'merchant' && traders > 1 ? card.vp : 0), 0);
+}
+
+function relicScore(player) {
+  return player.relics.length * RELIC_VP;
 }
 
 function residentCount(player) {
@@ -77,9 +85,8 @@ function City({ player, active, selectedCard, onPlace, infection, plaguePreview,
   const estates = ['дворяне', 'священники', 'простолюдины'];
   return <section className={`city ${active ? 'active' : ''} ${selectedCard ? 'place-target' : ''}`} onClickCapture={(event) => selectedCard && !event.target.closest('.city-head') && onPlace()}>
     <button className="city-head" onClick={onPlace} disabled={!selectedCard}>
-      <span>{player.name} ({score(player)} ПО · {player.crusade} ✠)</span>
+      <span>{player.name} ({score(player)} ПО <em className="vp-relic">{relicScore(player)}H</em> + <em className="vp-resident">{residentScore(player)}R</em> · {player.crusade} ✠)</span>
     </button>
-    {player.relics.length > 0 && <div className="relics">{player.relics.map((relicId) => <div className="relic-card" key={relicId} title={`Реликвия: +${RELIC_VP} победных очков`}><img src={`/assets/cards/${relicId}.webp`} alt={`Реликвия +${RELIC_VP} ПО`} /></div>)}</div>}
     {infection?.host === player.id && <div className="infection" onMouseEnter={() => setPlaguePreview(true)} onMouseLeave={() => setPlaguePreview(false)} onClick={() => setPlaguePreview((open) => !open)} title="Нажмите или наведите для просмотра карты эпидемии"><span>☠</span><strong>{infection.card.title}</strong><em>{infection.power} жертв. · {epidemicPriority(infection.card, infection)}</em>{plaguePreview && <div className="plague-preview"><img src={infection.card.art} alt={infection.card.title} /><b>{infection.card.title}</b><small>{infection.card.effect}</small></div>}</div>}
     <div className="lanes">
       {estates.map((estate) => <div className="lane" key={estate}>
@@ -772,7 +779,7 @@ export default function App() {
     {game.pendingChoice && <div className="resident-choice"><strong>{game.pendingChoice.ability === 'heretic-alch' ? 'Еретик-алхимик' : game.pendingChoice.ability === 'heretic-science' ? 'Еретик-натуралист' : game.pendingChoice.ability === 'inquisitor' ? 'Инквизитор' : game.pendingChoice.ability === 'recruit' ? 'Рекрутёр' : game.pendingChoice.ability === 'hare' ? 'Заяц' : game.pendingChoice.ability === 'possesed' ? 'Одержимый' : game.pendingChoice.ability === 'crossbowman' ? 'Арбалетчик' : 'Шут'} требует выбора</strong><span>{game.pendingChoice.ability === 'heretic-alch' ? 'Нажми на жителя, которого уничтожить.' : game.pendingChoice.ability === 'heretic-science' ? 'Нажми на жителя, которого переместить.' : game.pendingChoice.ability === 'inquisitor' ? 'Нажми на жителя в своём городе для казни.' : game.pendingChoice.ability === 'recruit' ? 'Нажми на мирного жителя, чтобы отправить его в Поход, или пропусти.' : game.pendingChoice.ability === 'hare' ? 'Нажми на жителя, которого обменять.' : game.pendingChoice.ability === 'possesed' ? 'Нажми на жителя, чью способность повторить.' : game.pendingChoice.ability === 'crossbowman' ? 'Нажми на карту Перекрёстка, которую сбросить.' : 'Нажми на любую карту Перекрёстка, чтобы скопировать её свойство.'}</span>{game.pendingChoice.ability === 'recruit' && <button type="button" onClick={skipRecruiter}>Пропустить</button>}</div>}
     <section className="table"><div className="play-column"><section className={`draw-module ${game.phase === 'draw-deck' ? 'ready' : ''}`}><div className="crossroad-cards"><Card faceDown directClick onClick={drawDeck} />{game.crossroads.map((card, index) => <Card card={card} key={card.uid} targetable={canChooseCrossroad(card)} onClick={() => game.pendingChoice?.ability === 'jester' ? chooseCrossroad(index) : game.pendingChoice?.ability === 'crossbowman' ? chooseCrossbowmanCrossroad(index) : drawCrossroads(index)} />)}</div></section>{game.current === 0 && <aside className="side-panel hand-panel"><div className="section-title"><span>Твоя рука</span><small>{game.players[0].hand.length} карт</small></div><div className="hand">{game.players[0].hand.map((card) => <Card card={card} key={card.uid} selected={selected?.uid === card.uid} onClick={() => game.current === 0 && game.phase === 'play' && !game.pendingChoice && setSelected(card)} />)}</div><p className="hint">{notice || (game.pendingChoice ? 'Выделенные жители на поле кликабельны.' : game.forcedPlay?.playerId === 0 ? `Ведьма заставляет разыграть ещё ${game.forcedPlay.cardIds.length} карты немедленно.` : selected ? `«${selected.title}»: ${selected.effect} Нажми на город — мгновенный эффект будет отмечен в Хронике.` : 'Твои карты появятся здесь.')}</p></aside>}<section className={`cities players-${Math.min(game.players.length, 4)}`} style={{ '--player-count': game.players.length }}>{game.players.map((player) => <City key={player.id} player={player} active={player.id === game.current} selectedCard={selected} onPlace={() => place(player.id)} infection={game.infection} plaguePreview={plaguePreview} setPlaguePreview={setPlaguePreview} residentTarget={(resident) => canChooseResident(player.id, resident)} onResidentTarget={chooseResident} />)}</section></div></section>
     {logOpen && <aside className="chronicle chronicle-bottom"><p>Хроника <i>{game.log.length}</i></p>{game.log.map((line, index) => <small key={`${line}-${index}`}>{line}</small>)}</aside>}
-    {winner && <div className="ending"><div><p className="eyebrow">летописец поставил точку</p><h2>{winner.name} побеждает</h2><strong>{score(winner)} победных очков</strong><div className="scoreboard">{game.players.map((player) => <span key={player.id}><b>{player.name}</b><i>{residentCount(player)} жителей · {score(player)} ПО · {player.crusade} ✠ · {player.relics.length} реликв.</i></span>)}</div><div className="graph"><p>Победные очки по ходам</p><ScoreChart history={game.history} players={game.players} /></div><button onClick={() => setGame(freshGame(botCount, game.language ?? language, game.gameSpeed ?? gameSpeed))}>Ещё один год страданий</button></div></div>}
+    {winner && <div className="ending"><div><p className="eyebrow">летописец поставил точку</p><h2>{winner.name} побеждает</h2><strong>{score(winner)} победных очков</strong><div className="scoreboard">{game.players.map((player) => <span key={player.id}><b>{player.name}</b><i>{residentCount(player)} жителей · <b className="score-total">{score(player)} ПО</b> (<em className="vp-relic">{relicScore(player)}H</em> + <em className="vp-resident">{residentScore(player)}R</em>) · {player.crusade} ✠ · {player.relics.length} реликв.</i></span>)}</div><div className="graph"><p>Победные очки по ходам</p><ScoreChart history={game.history} players={game.players} /></div><button onClick={() => setGame(freshGame(botCount, game.language ?? language, game.gameSpeed ?? gameSpeed))}>Ещё один год страданий</button></div></div>}
     {bugOpen && <div className="bug-modal" onClick={() => bugStatus !== 'sending' && setBugOpen(false)}><form onSubmit={(event) => { event.preventDefault(); submitBug(); }} onClick={(event) => event.stopPropagation()}><h2>Сообщить об ошибке</h2><p>К отчёту будет приложена последняя хроника партии.</p><textarea autoFocus value={bugText} onChange={(event) => setBugText(event.target.value)} placeholder="Что произошло? (необязательно)" maxLength="1200" />{bugStatus === 'sent' ? <strong className="bug-success">Отчёт отправлен. Спасибо!</strong> : bugStatus === 'failed' ? <strong className="bug-failed">Не удалось отправить отчёт.</strong> : null}<div><button type="button" onClick={() => setBugOpen(false)} disabled={bugStatus === 'sending'}>Отмена</button><button className="start" type="submit" disabled={bugStatus === 'sending'}>Отправить</button></div></form></div>}
   </main>;
 }
