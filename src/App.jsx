@@ -567,7 +567,7 @@ export default function App() {
       const resident = target.city.find((item) => item.uid !== card.uid);
       const replacement = next.crossroads[0];
       if (resident && replacement) {
-        if (owner.bot) {
+        if (owner.bot && target.bot) {
           target.city = target.city.filter((item) => item.uid !== resident.uid); next.crossroads[0] = resident; target.city.push(replacement); activate(`меняет «${resident.title}» на «${replacement.title}» с Перекрёстка.`);
         } else {
           next.pendingChoice = { ability: card.id, actorId: ownerId, targetId, cardUid: card.uid };
