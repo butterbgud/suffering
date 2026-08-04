@@ -50,7 +50,7 @@ function residentCount(player) {
   return player.city.filter((card) => card.id !== 'corpse').length;
 }
 
-const WOMEN = new Set(['lady', 'harlot', 'whore', 'devka', 'witch']);
+const WOMEN = new Set(['lady', 'harlot', 'devka', 'witch']);
 const epidemicPriority = (card, infection) => card.id === 'syphilis'
   ? (infection?.syphilisBoosted ? 'усиленная эпидемия' : 'обычная эпидемия')
   : ({ cholera: 'сначала простолюдины', leprosy: 'сначала священники', malaria: 'сначала дворяне', black_pox: 'сначала высокий иммунитет', bubonic_plague: 'по 2 жертвы в первый ход' }[card.id] || 'обычный порядок');
@@ -507,7 +507,11 @@ export default function App() {
     } else if (card.id === 'troubadur') {
       const stolen = next.players.filter((player) => player.id !== targetId).reduce((total, player) => { const amount = Math.min(1, player.crusade); player.crusade -= amount; return total + amount; }, 0);
       target.crusade += stolen; activate(`крадёт по 1 очку Похода у соседних городов (${stolen} всего).`);
-    } else if (card.id === 'harlot' || card.id === 'devka') {
+    } else if (card.id === 'harlot') {
+      const victim = target.city.find((resident) => resident.uid !== card.uid && WOMEN.has(resident.id));
+      if (victim) discardResident(next, target, victim, '✦ Распутная девка сбрасывает женщину');
+      else activate('не находит женщину в городе.');
+    } else if (card.id === 'devka') {
       const adjacent = adjacentPlayers(next, targetId).find((player) => player.city.some((resident) => resident.id === 'monk'));
       const monk = adjacent?.city.find((resident) => resident.id === 'monk');
       if (monk) moveResident(next, adjacent, target, monk, `✦ ${card.title} переманивает Монаха из города ${adjacent.name}.`);
@@ -622,10 +626,6 @@ export default function App() {
       const victim = target.city.find((resident) => resident.uid !== card.uid && ['lady', 'harlot', 'devka'].includes(resident.id));
       if (victim) discardResident(next, target, victim, '✦ Младенец изгоняет женщину');
       else activate('не находит Леди или Девки в городе.');
-    } else if (card.id === 'whore') {
-      const victim = target.city.find((resident) => resident.uid !== card.uid && WOMEN.has(resident.id));
-      if (victim) discardResident(next, target, victim, '✦ Шлюха сбрасывает женщину');
-      else activate('не находит женщину в городе.');
     } else if (card.id === 'crossbowman') {
       const eligible = next.crossroads.filter((item) => !item.epidemic);
       if (!eligible.length) activate('не находит персонажей на Перекрёстке.');
