@@ -465,16 +465,19 @@ export default function App() {
       .filter((player, index, players) => player.id !== playerId && players.findIndex((item) => item.id === player.id) === index);
   }
 
+  function advanceAdaptable(resident) {
+    if (resident?.id !== 'adaptable') return;
+    const estates = ['простолюдины', 'священники', 'дворяне'];
+    resident.vp += 1;
+    resident.estate = estates[Math.min(estates.indexOf(resident.estate) + 1, estates.length - 1)];
+  }
+
   function moveResident(next, from, to, resident, message) {
     if (!resident) return false;
     from.city = from.city.filter((item) => item.uid !== resident.uid);
     const midget = resident.id !== 'midget' && from.city.find((item) => item.id === 'midget');
     if (midget) from.city = from.city.filter((item) => item.uid !== midget.uid);
-    if (resident.id === 'adaptable') {
-      const estates = ['простолюдины', 'священники', 'дворяне'];
-      resident.vp += 1;
-      resident.estate = estates[Math.min(estates.indexOf(resident.estate) + 1, estates.length - 1)];
-    }
+    advanceAdaptable(resident);
     to.city.push(resident);
     if (midget) to.city.push(midget);
     if (message) next.log.unshift(message);
@@ -524,6 +527,8 @@ export default function App() {
       const replacement = adjacent?.city.find((item) => item.estate === resident?.estate);
       if (resident && replacement) {
         target.city = target.city.filter((item) => item.uid !== resident.uid); adjacent.city = adjacent.city.filter((item) => item.uid !== replacement.uid);
+        advanceAdaptable(resident);
+        advanceAdaptable(replacement);
         target.city.push(replacement); adjacent.city.push(resident); activate(`меняет жителей сословия «${resident.estate}» с городом ${adjacent.name}.`);
       }
     } else if (card.id === 'minstrel') {
