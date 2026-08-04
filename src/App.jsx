@@ -75,7 +75,7 @@ function Card({ card, small = false, onClick, selected, targetable = false, face
 
 function City({ player, active, selectedCard, onPlace, infection, plaguePreview, setPlaguePreview, residentTarget, onResidentTarget }) {
   const estates = ['дворяне', 'священники', 'простолюдины'];
-  return <section className={`city ${active ? 'active' : ''}`}>
+  return <section className={`city ${active ? 'active' : ''} ${selectedCard ? 'place-target' : ''}`} onClickCapture={(event) => selectedCard && !event.target.closest('.city-head') && onPlace()}>
     <button className="city-head" onClick={onPlace} disabled={!selectedCard}>
       <span>{player.name} ({score(player)} ПО · {player.crusade} ✠)</span>
     </button>

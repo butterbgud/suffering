@@ -103,6 +103,9 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .draw-module.ready .card.back { border-color: #f3ca77; box-shadow: 0 0 0 3px #f3ca7766, 0 0 28px #e3a851cc, 3px 5px 10px #000a; animation: draw-pulse 1.5s ease-in-out infinite; }
 .lane { grid-template-columns: 1fr; }
 .lane label { display: none; }
+.city .card.small { width: 132px; }
+.city.place-target { outline: 2px solid #f3ca77; box-shadow: 0 0 0 3px #f3ca7733, 0 0 28px #e3a851aa; cursor: pointer; }
+.city.place-target .city-head { cursor: pointer; }
 .card.zoomed { z-index: 100; transform: scale(1.8); box-shadow: 0 0 0 3px #f3ca77, 0 12px 35px #000e; }
 .card.small.zoomed { transform: scale(2.2); }
 .card.zoomed:hover { transform: scale(1.85); }
@@ -128,5 +131,7 @@ header { display: flex; align-items: center; justify-content: space-between; gap
   .lane label { padding-top: 3px; font-size: 9px; text-align: center; }
   .residents { justify-content: center; }
   .card.small { width: 43px; }
+  .city .card.small { width: 86px; }
+  .city .guard-stack { width: 86px; flex-basis: 86px; }
   .residents .card { margin-right: -18px; }
 }
