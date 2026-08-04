@@ -100,20 +100,14 @@ function City({ player, active, selectedCard, onPlace, infection, plaguePreview,
 
 function CityWheel({ players, currentId, wheelPlayer, setWheelPlayer, cityProps }) {
   const shown = players[wheelPlayer] || players[0];
-  const step = 360 / players.length;
-  const rotate = -wheelPlayer * step;
   const moveWheel = (direction) => setWheelPlayer((index) => (index + direction + players.length) % players.length);
   return <section className="wheel-view">
     <div className="wheel-stage">
-      <div className="wheel-orbit" style={{ transform: `rotate(${rotate}deg)` }}>
-        <div className="wheel-core" />
-        {players.map((player, index) => <div className={`wheel-marker ${player.id === currentId ? 'turn-marker' : ''}`} key={player.id} style={{ '--angle': `${index * step}deg` }}><img src={`/assets/ui/c${Math.min(index + 1, 5)}.webp`} alt="" /><span>{player.name}</span></div>)}
-      </div>
       <button className="wheel-arrow wheel-arrow-left" onClick={() => moveWheel(-1)} aria-label="Предыдущий город">‹</button>
       <button className="wheel-arrow wheel-arrow-right" onClick={() => moveWheel(1)} aria-label="Следующий город">›</button>
-      <div className="wheel-city"><City {...cityProps} player={shown} active={shown.id === currentId} /></div>
+      <div className="wheel-ribbon-viewport"><div className="wheel-ribbon" style={{ transform: `translateX(-${wheelPlayer * 100}%)` }}>{players.map((player, index) => <article className="wheel-ribbon-card" key={player.id}><img className={`wheel-castle ${player.id === currentId ? 'turn-marker' : ''}`} src={`/assets/ui/c${Math.min(index + 1, 5)}.webp`} alt="" /><City {...cityProps} player={player} active={player.id === currentId} onPlace={() => cityProps.onPlace(player.id)} residentTarget={(resident) => cityProps.residentTarget(player.id, resident)} /></article>)}</div></div>
     </div>
-    <div className="wheel-caption">{shown.name} · город {wheelPlayer + 1} / {players.length}</div>
+    <div className="wheel-caption">{shown.name} · city {wheelPlayer + 1} / {players.length}</div>
   </section>;
 }
 

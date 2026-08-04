@@ -111,6 +111,11 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .score-total { color: #f3d098; }
 .wheel-view { grid-column: 1; grid-row: 3; min-width: 0; }
 .wheel-stage { position: relative; min-height: 520px; overflow: hidden; border: 1px solid #8c5b2d99; background: radial-gradient(circle, #4b2b1c 0 22%, #24140f 23% 54%, #120b09 55%); box-shadow: inset 0 0 70px #000b; }
+.wheel-ribbon-viewport { position: absolute; inset: 0 56px; overflow: hidden; }
+.wheel-ribbon { display: flex; height: 100%; transition: transform .45s cubic-bezier(.22,.8,.25,1); }
+.wheel-ribbon-card { flex: 0 0 100%; min-width: 0; padding: 18px 10px 10px; overflow: auto; }
+.wheel-castle { display: block; width: min(150px, 30%); height: 150px; margin: 0 auto 4px; object-fit: contain; filter: drop-shadow(0 5px 8px #000b); }
+.wheel-castle.turn-marker { filter: drop-shadow(0 0 12px #f3ca77); }
 .wheel-orbit { position: absolute; z-index: 1; inset: 0; transition: transform .55s cubic-bezier(.22,.8,.25,1); }
 .wheel-core { position: absolute; left: 50%; top: 50%; width: 46%; aspect-ratio: 1; border: 1px solid #bd854b99; border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 0 18px #1c100c66, inset 0 0 30px #0009; }
 .wheel-marker { position: absolute; left: 50%; top: 50%; width: 86px; display: grid; justify-items: center; gap: 2px; color: #c9a36e; font: 700 9px Unbounded, sans-serif; text-align: center; transform: rotate(var(--angle)) translateY(-205px) rotate(calc(0deg - var(--angle))); transform-origin: center; }
@@ -151,6 +156,9 @@ header { display: flex; align-items: center; justify-content: space-between; gap
   .city .guard-stack { width: 86px; flex-basis: 86px; }
   .residents .card { margin-right: -18px; }
   .wheel-stage { min-height: 440px; }
+  .wheel-ribbon-viewport { inset: 0 42px; }
+  .wheel-ribbon-card { padding: 8px 2px; }
+  .wheel-castle { width: 90px; height: 90px; }
   .wheel-marker { width: 58px; transform: rotate(var(--angle)) translateY(-168px) rotate(calc(0deg - var(--angle))); font-size: 7px; }
   .wheel-marker img { width: 48px; height: 48px; }
   .wheel-city { width: 76%; padding: 3px; }
