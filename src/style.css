@@ -84,3 +84,29 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 @media (max-width: 570px) { .lobby-meta { top: 11px; left: 11px; } .option-group { font-size: 8px; } .welcome-card { padding-top: 70px; } }
 @keyframes draw-pulse { 50% { box-shadow: 0 0 0 4px #f3ca7733, 0 0 34px #e3a851, 3px 5px 10px #000a; } }
 @keyframes draw-pulse-text { 50% { text-shadow: 0 0 18px #f3ca77; } }
+
+/* Compact draw/hand layout: deck and Crossroads share one action module. */
+.table { display: block; width: min(1500px, 100%); }
+.play-column { display: grid; grid-template-columns: minmax(0, 1fr) minmax(195px, 255px); gap: 16px; align-items: start; }
+.draw-module { grid-column: 1; display: grid; grid-template-columns: minmax(105px, 170px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.draw-module .deck-zone { padding-top: 2px; }
+.draw-module .crossroads { min-width: 0; margin: 0; padding: 0; }
+.draw-module .crossroad-cards { gap: clamp(8px, 2vw, 24px); }
+.hand-panel { grid-column: 2; grid-row: 1 / span 2; position: sticky; top: 10px; }
+.cities { grid-column: 1; grid-row: 2; }
+.chronicle-bottom { width: min(1500px, 100%); margin: 18px auto 0; padding: 14px; border: 1px solid #82562d99; background: #170e0ddd; box-shadow: 0 10px 35px #0008; }
+.chronicle-bottom p { margin: 0; color: #d69a4b; font: 700 9px Unbounded, sans-serif; text-transform: uppercase; letter-spacing: .12em; }
+.chronicle-bottom small { display: block; margin-top: 9px; color: #c6aa7d; font-size: 14px; line-height: 1; }
+@media (max-width: 980px) {
+  .play-column { grid-template-columns: 1fr; }
+  .draw-module { grid-column: 1; }
+  .hand-panel { grid-column: 1; grid-row: 2; position: static; }
+  .cities { grid-column: 1; grid-row: 3; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 570px) {
+  .draw-module { grid-template-columns: 82px minmax(0, 1fr); gap: 8px; }
+  .draw-module .deck-zone .card { width: 76px; }
+  .draw-module .crossroad-cards { gap: 4px; padding-top: 9px; }
+  .draw-module .crossroad-cards .card { width: calc((100% - 8px) / 3); }
+  .cities { grid-template-columns: 1fr; }
+}
