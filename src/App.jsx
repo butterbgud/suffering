@@ -51,7 +51,9 @@ function residentCount(player) {
 }
 
 const WOMEN = new Set(['lady', 'harlot', 'devka', 'witch']);
-const epidemicPriority = (card) => ({ cholera: 'сначала простолюдины', leprosy: 'сначала священники', malaria: 'сначала дворяне', black_pox: 'сначала высокий иммунитет', bubonic_plague: 'сначала по 2 жертвы', syphilis: 'усиленная эпидемия' }[card.id] || 'обычный порядок');
+const epidemicPriority = (card, infection) => card.id === 'syphilis'
+  ? (infection?.syphilisBoosted ? 'усиленная эпидемия' : 'обычная эпидемия')
+  : ({ cholera: 'сначала простолюдины', leprosy: 'сначала священники', malaria: 'сначала дворяне', black_pox: 'сначала высокий иммунитет', bubonic_plague: 'по 2 жертвы в первый ход' }[card.id] || 'обычный порядок');
 
 function recordHistory(game, label) {
   game.history.push({ label, scores: game.players.map(score), crusade: game.players.map((player) => player.crusade) });
@@ -77,7 +79,7 @@ function City({ player, active, selectedCard, onPlace, infection, plaguePreview,
       <span>{player.name} ({score(player)} ПО · {player.crusade} ✠)</span>
     </button>
     {player.relics.length > 0 && <div className="relics">{player.relics.map((relicId) => <div className="relic-card" key={relicId} title={`Реликвия: +${RELIC_VP} победных очков`}><img src={`/assets/cards/${relicId}.webp`} alt={`Реликвия +${RELIC_VP} ПО`} /></div>)}</div>}
-    {infection?.host === player.id && <div className="infection" onMouseEnter={() => setPlaguePreview(true)} onMouseLeave={() => setPlaguePreview(false)} onClick={() => setPlaguePreview((open) => !open)} title="Нажмите или наведите для просмотра карты эпидемии"><span>☠</span><strong>{infection.card.title}</strong><em>{infection.power} жертв. · {epidemicPriority(infection.card)}</em>{plaguePreview && <div className="plague-preview"><img src={infection.card.art} alt={infection.card.title} /><b>{infection.card.title}</b><small>{infection.card.effect}</small></div>}</div>}
+    {infection?.host === player.id && <div className="infection" onMouseEnter={() => setPlaguePreview(true)} onMouseLeave={() => setPlaguePreview(false)} onClick={() => setPlaguePreview((open) => !open)} title="Нажмите или наведите для просмотра карты эпидемии"><span>☠</span><strong>{infection.card.title}</strong><em>{infection.power} жертв. · {epidemicPriority(infection.card, infection)}</em>{plaguePreview && <div className="plague-preview"><img src={infection.card.art} alt={infection.card.title} /><b>{infection.card.title}</b><small>{infection.card.effect}</small></div>}</div>}
     <div className="lanes">
       {estates.map((estate) => <div className="lane" key={estate}>
         <label>{estate}</label>
@@ -419,7 +421,7 @@ export default function App() {
     next.log.unshift(`✦ Стражник сброшен: карта «${hidden.title}» раскрывается и срабатывает.`);
     if (hidden.epidemic) {
       const syphilisBoost = hidden.id === 'syphilis' && player.city.some((resident) => ['harlot', 'devka'].includes(resident.id));
-      next.infection = { card: hidden, host: player.id, origin: player.id, power: syphilisBoost ? 2 : hidden.victims };
+      next.infection = { card: hidden, host: player.id, origin: player.id, power: syphilisBoost ? 2 : hidden.victims, syphilisBoosted: syphilisBoost };
       if (syphilisBoost) next.log.unshift('✦ Раскрытая Сифилис начинает с двух жертв.');
     } else {
       player.city.push(hidden);
@@ -676,7 +678,7 @@ export default function App() {
     }
     if (card.epidemic) {
       const syphilisBoost = card.id === 'syphilis' && target.city.some((resident) => ['harlot', 'devka'].includes(resident.id));
-      next.infection = { card, host: targetId, origin: targetId, power: syphilisBoost ? 2 : card.victims };
+      next.infection = { card, host: targetId, origin: targetId, power: syphilisBoost ? 2 : card.victims, syphilisBoosted: syphilisBoost };
       next.log.unshift(`${owner.name} приносит «${card.title}» в город ${target.name}.`);
       if (syphilisBoost) next.log.unshift('✦ Сифилис начинает с двух жертв: в исходном городе есть Девка или Распутная девка.');
     } else {
