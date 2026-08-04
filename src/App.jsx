@@ -3,15 +3,14 @@ import { buildDeck, shuffle } from './cards.js';
 
 const BUILD_VERSION = __BUILD_VERSION__;
 
-const NAMES = ['Конста', 'Гертруда', 'Ульрих', 'Ингеборга', 'Тибальт', 'Матильда'];
-const BOT_NAMES = ['Гертруда', 'Ульрих', 'Ингеборга', 'Тибальт', 'Матильда'];
 const CRUSADE_POOL = { 2: 16, 3: 16, 4: 20, 5: 23, 6: 25 };
 const RELIC_VP = 7;
 const RELIC_CARDS = ['hg1', 'hg2', 'hg3'];
 
 function freshGame(botCount, language = 'ru', gameSpeed = 5) {
   const deck = shuffle(buildDeck());
-  const players = Array.from({ length: botCount + 1 }, (_, id) => ({ id, name: id ? BOT_NAMES[id - 1] : NAMES[0], bot: id > 0, city: [], hand: [], crusade: 0, relics: [] }));
+  const names = language === 'en' ? ['You', ...Array.from({ length: 5 }, (_, index) => `B${index + 1}`)] : ['Вы', ...Array.from({ length: 5 }, (_, index) => `Б${index + 1}`)];
+  const players = Array.from({ length: botCount + 1 }, (_, id) => ({ id, name: names[id], bot: id > 0, city: [], hand: [], crusade: 0, relics: [] }));
   return {
     deck: deck.slice(3),
     crossroads: deck.slice(0, 3),
