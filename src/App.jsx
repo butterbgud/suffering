@@ -230,7 +230,7 @@ export default function App() {
   }
 
   function canChooseCrossroad(card) {
-    return game?.pendingChoice?.ability === 'jester' && !card.epidemic;
+    return ['jester', 'crossbowman'].includes(game?.pendingChoice?.ability) && !card.epidemic;
   }
 
   function chooseCrossroad(index) {
@@ -249,6 +249,23 @@ export default function App() {
       if (!next.forcedPlay && !actor.hand.length && next.current === actor.id) endTurn(next);
     });
     setNotice('Способность карты с Перекрёстка применена.');
+  }
+
+  function chooseCrossbowmanCrossroad(index) {
+    if (!game?.pendingChoice || game.pendingChoice.ability !== 'crossbowman' || !canChooseCrossroad(game.crossroads[index])) return;
+    update((next) => {
+      const choice = next.pendingChoice;
+      const actor = next.players[choice.actorId];
+      const victim = next.crossroads[index];
+      next.crossroads.splice(index, 1);
+      next.discard.push(victim);
+      refillCrossroads(next);
+      next.pendingChoice = null;
+      next.phase = 'play';
+      next.log.unshift(`✦ ${actor.name} выбирает «${victim.title}» на Перекрёстке для сброса.`);
+      if (!next.forcedPlay && !actor.hand.length && next.current === actor.id) endTurn(next);
+    });
+    setNotice('Арбалетчик сбросил выбранную карту.');
   }
 
   function finish(next) {
@@ -568,9 +585,19 @@ export default function App() {
       if (victim) discardResident(next, target, victim, '✦ Младенец изгоняет женщину');
       else activate('не находит Леди или Девки в городе.');
     } else if (card.id === 'crossbowman') {
-      const victim = next.crossroads.sort((a, b) => b.vp - a.vp)[0];
-      if (victim) { next.crossroads = next.crossroads.filter((item) => item.uid !== victim.uid); next.discard.push(victim); refillCrossroads(next); activate(`сбрасывает «${victim.title}» с Перекрёстка.`); }
-      else activate('не находит персонажей на Перекрёстке.');
+      const eligible = next.crossroads.filter((item) => !item.epidemic);
+      if (!eligible.length) activate('не находит персонажей на Перекрёстке.');
+      else if (owner.bot) {
+        const victim = [...eligible].sort((a, b) => b.vp - a.vp)[0];
+        next.crossroads = next.crossroads.filter((item) => item.uid !== victim.uid);
+        next.discard.push(victim);
+        refillCrossroads(next);
+        activate(`сбрасывает «${victim.title}» с Перекрёстка.`);
+      } else {
+        next.pendingChoice = { ability: card.id, actorId: ownerId, targetId, cardUid: card.uid };
+        next.phase = 'choice';
+        activate('выбери карту на Перекрёстке для сброса.');
+      }
     } else if (card.id === 'bandit') {
       const enemy = next.players.filter((player) => player.id !== targetId).sort((a, b) => score(b) - score(a))[0];
       const victim = enemy?.city.filter((resident) => resident.estate === 'дворяне').sort((a, b) => b.vp - a.vp)[0];
@@ -670,10 +697,10 @@ export default function App() {
   const winner = game.ended ? [...game.players].sort((a, b) => score(b) - score(a))[0] : null;
   return <main className="game-shell">
     <header><div className="brand"><p className="eyebrow">сезон чумы · год господень 1248</p><small className="build-version">#{BUILD_VERSION}</small><div className="header-actions"><button className="log-toggle" title="Показать/скрыть хронику" aria-label="Показать/скрыть хронику" onClick={() => setLogOpen((open) => !open)}>{logOpen ? 'Л' : 'Л'}</button><button className="report-button" title="Сообщить об ошибке" aria-label="Сообщить об ошибке" onClick={() => { setBugStatus(''); setBugOpen(true); }}><img src="/assets/report-bug.jpg" alt="" /></button></div></div><div className="crusade-meter"><span>Святая земля · поход {Math.min(game.crusadeRound, 3)}/3</span><strong>{game.crusadeRound <= 3 ? game.crusadePool : 'захвачена'} {game.crusadeRound <= 3 && <small>/ {game.crusadeLimit}</small>}</strong><i style={{ width: `${game.crusadeRound <= 3 ? (game.crusadePool / game.crusadeLimit) * 100 : 0}%` }} /></div></header>
-    {game.pendingChoice && <div className="resident-choice"><strong>{game.pendingChoice.ability === 'heretic-alch' ? 'Еретик-алхимик' : game.pendingChoice.ability === 'heretic-science' ? 'Еретик-натуралист' : game.pendingChoice.ability === 'inquisitor' ? 'Инквизитор' : game.pendingChoice.ability === 'recruit' ? 'Рекрутёр' : 'Шут'} требует выбора</strong><span>{game.pendingChoice.ability === 'heretic-alch' ? 'Нажми на жителя, которого уничтожить.' : game.pendingChoice.ability === 'heretic-science' ? 'Нажми на жителя, которого переместить.' : game.pendingChoice.ability === 'inquisitor' ? 'Нажми на жителя в своём городе для казни.' : game.pendingChoice.ability === 'recruit' ? 'Нажми на мирного жителя, чтобы отправить его в Поход, или пропусти.' : 'Нажми на любую карту Перекрёстка, чтобы скопировать её свойство.'}</span>{game.pendingChoice.ability === 'recruit' && <button type="button" onClick={skipRecruiter}>Пропустить</button>}</div>}
+    {game.pendingChoice && <div className="resident-choice"><strong>{game.pendingChoice.ability === 'heretic-alch' ? 'Еретик-алхимик' : game.pendingChoice.ability === 'heretic-science' ? 'Еретик-натуралист' : game.pendingChoice.ability === 'inquisitor' ? 'Инквизитор' : game.pendingChoice.ability === 'recruit' ? 'Рекрутёр' : game.pendingChoice.ability === 'crossbowman' ? 'Арбалетчик' : 'Шут'} требует выбора</strong><span>{game.pendingChoice.ability === 'heretic-alch' ? 'Нажми на жителя, которого уничтожить.' : game.pendingChoice.ability === 'heretic-science' ? 'Нажми на жителя, которого переместить.' : game.pendingChoice.ability === 'inquisitor' ? 'Нажми на жителя в своём городе для казни.' : game.pendingChoice.ability === 'recruit' ? 'Нажми на мирного жителя, чтобы отправить его в Поход, или пропусти.' : game.pendingChoice.ability === 'crossbowman' ? 'Нажми на карту Перекрёстка, которую сбросить.' : 'Нажми на любую карту Перекрёстка, чтобы скопировать её свойство.'}</span>{game.pendingChoice.ability === 'recruit' && <button type="button" onClick={skipRecruiter}>Пропустить</button>}</div>}
     <section className="table">
       <aside className="side-panel"><div className={`deck-zone ${game.phase === 'draw-deck' ? 'ready' : ''}`}><Card faceDown onClick={drawDeck} /><b>{game.deck.length}</b><span>колода</span><small>Возьми карту</small></div>{logOpen && <div className="chronicle"><p>Хроника <i>{game.log.length}</i></p>{game.log.map((line, index) => <small key={`${line}-${index}`}>{line}</small>)}</div>}</aside>
-      <div className="board"><section className={`crossroads ${game.phase === 'draw-crossroads' ? 'ready' : ''}`}><div className="section-title"><span>Перекрёсток</span><small>{game.pendingChoice?.ability === 'jester' ? 'выбери карту для копирования' : 'выбери одну карту после колоды'}</small></div><div className="crossroad-cards">{game.crossroads.map((card, index) => <Card card={card} key={card.uid} targetable={canChooseCrossroad(card)} onClick={() => game.pendingChoice?.ability === 'jester' ? chooseCrossroad(index) : drawCrossroads(index)} />)}</div></section><section className="cities" style={{ '--player-count': game.players.length }}>{game.players.map((player) => <City key={player.id} player={player} active={player.id === game.current} selectedCard={selected} onPlace={() => place(player.id)} infection={game.infection} plaguePreview={plaguePreview} setPlaguePreview={setPlaguePreview} residentTarget={(resident) => canChooseResident(player.id, resident)} onResidentTarget={chooseResident} />)}</section></div>
+      <div className="board"><section className={`crossroads ${game.phase === 'draw-crossroads' ? 'ready' : ''}`}><div className="section-title"><span>Перекрёсток</span><small>{game.pendingChoice?.ability === 'jester' ? 'выбери карту для копирования' : game.pendingChoice?.ability === 'crossbowman' ? 'выбери карту для сброса' : 'выбери одну карту после колоды'}</small></div><div className="crossroad-cards">{game.crossroads.map((card, index) => <Card card={card} key={card.uid} targetable={canChooseCrossroad(card)} onClick={() => game.pendingChoice?.ability === 'jester' ? chooseCrossroad(index) : game.pendingChoice?.ability === 'crossbowman' ? chooseCrossbowmanCrossroad(index) : drawCrossroads(index)} />)}</div></section><section className="cities" style={{ '--player-count': game.players.length }}>{game.players.map((player) => <City key={player.id} player={player} active={player.id === game.current} selectedCard={selected} onPlace={() => place(player.id)} infection={game.infection} plaguePreview={plaguePreview} setPlaguePreview={setPlaguePreview} residentTarget={(resident) => canChooseResident(player.id, resident)} onResidentTarget={chooseResident} />)}</section></div>
       <aside className="side-panel hand-panel"><div className="section-title"><span>Твоя рука</span><small>{game.players[0].hand.length} карт</small></div><div className="hand">{game.players[0].hand.map((card) => <Card card={card} key={card.uid} selected={selected?.uid === card.uid} onClick={() => game.current === 0 && game.phase === 'play' && !game.pendingChoice && setSelected(card)} />)}</div><p className="hint">{notice || (game.pendingChoice ? 'Выделенные жители на поле кликабельны.' : game.forcedPlay?.playerId === 0 ? `Ведьма заставляет разыграть ещё ${game.forcedPlay.cardIds.length} карты немедленно.` : selected ? `«${selected.title}»: ${selected.effect} Нажми на город — мгновенный эффект будет отмечен в Хронике.` : 'Твои карты появятся здесь.')}</p></aside>
     </section>
     {winner && <div className="ending"><div><p className="eyebrow">летописец поставил точку</p><h2>{winner.name} побеждает</h2><strong>{score(winner)} победных очков</strong><div className="scoreboard">{game.players.map((player) => <span key={player.id}><b>{player.name}</b><i>{score(player)} ПО · {player.crusade} ✠ · {player.relics.length} реликв.</i></span>)}</div><div className="graph"><p>Победные очки по ходам</p><ScoreChart history={game.history} players={game.players} /></div><button onClick={() => setGame(freshGame(botCount))}>Ещё один год страданий</button></div></div>}
