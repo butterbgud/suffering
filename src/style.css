@@ -101,6 +101,8 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .draw-module { display: block; padding: 0; }
 .draw-module .crossroad-cards { justify-content: flex-start; align-items: center; margin: 0; padding: 0; }
 .draw-module.ready .card.back { border-color: #f3ca77; box-shadow: 0 0 0 3px #f3ca7766, 0 0 28px #e3a851cc, 3px 5px 10px #000a; animation: draw-pulse 1.5s ease-in-out infinite; }
+.lane { grid-template-columns: 1fr; }
+.lane label { display: none; }
 .card.zoomed { z-index: 100; transform: scale(1.8); box-shadow: 0 0 0 3px #f3ca77, 0 12px 35px #000e; }
 .card.small.zoomed { transform: scale(2.2); }
 .card.zoomed:hover { transform: scale(1.85); }
