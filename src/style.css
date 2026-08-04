@@ -45,7 +45,6 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .build-version { color: #b78a5a; font: 10px Unbounded, sans-serif; letter-spacing: .08em; }
 .header-actions { display: flex; gap: 8px; align-items: start; }
 .log-toggle, .view-toggle, .report-button { width: 44px; height: 44px; padding: 0 !important; display: grid; place-items: center; overflow: hidden; color: #dec49d; border: 1px solid #9a7551; background: #24181a; cursor: pointer; font: 700 20px Georgia, serif; }
-.report-button img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .card-caption { display: none; }
 .card.back { background: #25140c url('/assets/cards/back.webp') center / cover no-repeat; }
 .crossroads { padding: 18px 0 0; margin-top: -14px; border: 0; background: transparent; box-shadow: none; }
@@ -121,7 +120,7 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .wheel-marker { position: absolute; left: 50%; top: 50%; width: 86px; display: grid; justify-items: center; gap: 2px; color: #c9a36e; font: 700 9px Unbounded, sans-serif; text-align: center; transform: rotate(var(--angle)) translateY(-205px) rotate(calc(0deg - var(--angle))); transform-origin: center; }
 .wheel-marker img { width: 70px; height: 70px; object-fit: contain; filter: drop-shadow(0 5px 8px #000b); }
 .wheel-marker.turn-marker img { filter: drop-shadow(0 0 12px #f3ca77); }
-.wheel-city { position: absolute; z-index: 3; left: 50%; top: 50%; width: min(78%, 620px); max-height: 88%; overflow: auto; padding: 8px; transform: translate(-50%, -50%); border: 1px solid #d69a4b99; background: #1b110ef2; box-shadow: 0 12px 50px #000d; }
+.wheel-city { position: absolute; z-index: 3; left: 50%; top: 50%; width: min(78%, 620px); max-height: 88%; overflow: auto; padding: 8px; transform: translate(-50%, -50%); }
 .wheel-city .city { width: 100%; }
 .wheel-arrow { position: absolute; z-index: 5; top: 50%; width: 42px; height: 68px; color: #f3d098; border: 1px solid #c18a4e; background: #1d110de6; cursor: pointer; font: 700 42px/1 Georgia, serif; transform: translateY(-50%); }
 .wheel-arrow:hover { color: #fff0bd; background: #5c321e; }
