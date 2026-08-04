@@ -162,8 +162,12 @@ export default function App() {
 
   const current = game?.players[game.current];
   useEffect(() => {
-    if (current) setWheelPlayer(current.id);
-  }, [current?.id]);
+    if (!current) return undefined;
+    // Let the finished bot's city remain visible briefly so its played cards
+    // can be inspected before the ribbon follows the next turn.
+    const timer = setTimeout(() => setWheelPlayer(current.id), game?.current === 0 ? 0 : 1400);
+    return () => clearTimeout(timer);
+  }, [current?.id, game?.current]);
   const update = (mutate) => setGame((previous) => {
     const next = structuredClone(previous);
     mutate(next);
