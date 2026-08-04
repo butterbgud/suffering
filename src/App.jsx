@@ -342,7 +342,7 @@ export default function App() {
     let sent = 0;
     const departures = next.players.filter((player) => !local || player.id === ownerId).map((player) => {
       const cityHasWomanOrAdaptable = player.city.some((card) => WOMEN.has(card.id) || card.id === 'adaptable');
-      let pilgrims = player.city.filter((card) => card.crusade > 0 && !(card.id === 'templar' && cityHasWomanOrAdaptable));
+      let pilgrims = player.city.filter((card) => (card.crusade > 0 || card.id === 'devka') && !(card.id === 'templar' && cityHasWomanOrAdaptable));
       const knight = player.city.find((card) => card.id === 'knight');
       const squire = player.city.find((card) => card.id === 'weapon_bearer');
       const otherPilgrims = pilgrims.filter((card) => !['knight', 'weapon_bearer'].includes(card.id));
