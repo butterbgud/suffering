@@ -704,6 +704,13 @@ export default function App() {
     if (!next.forcedPlay && !next.pendingChoice && !owner.hand.length && next.current === ownerId) endTurn(next);
   }
 
+  function episcopWouldAwardRelicToOther(next, botId) {
+    const simulation = structuredClone(next);
+    const before = simulation.players.map((player) => player.relics.length);
+    triggerCrusade(simulation, botId);
+    return simulation.players.some((player, index) => player.id !== botId && player.relics.length > before[index]);
+  }
+
   useEffect(() => {
     if (!game || !current?.bot || game.ended) return undefined;
     const timer = setTimeout(() => update((next) => {
@@ -712,15 +719,20 @@ export default function App() {
         const card = next.deck.shift(); if (!card) return finish(next);
         bot.hand.push(card); next.phase = 'draw-crossroads';
       } else if (next.phase === 'draw-crossroads') {
-        const index = Math.floor(Math.random() * next.crossroads.length);
+        const avoidEpiscop = episcopWouldAwardRelicToOther(next, bot.id);
+        const choices = avoidEpiscop ? next.crossroads.map((card, index) => card.id === 'episcop' ? -1 : index).filter((index) => index >= 0) : next.crossroads.map((_, index) => index);
+        const availableChoices = choices.length ? choices : next.crossroads.map((_, index) => index);
+        const index = availableChoices[Math.floor(Math.random() * availableChoices.length)];
         const card = next.crossroads.splice(index, 1)[0]; bot.hand.push(card);
         refillCrossroads(next);
         next.phase = 'play';
       } else if (next.phase === 'play') {
         if (next.forcedPlay && next.forcedPlay.playerId !== bot.id) return;
         const forcedCard = next.forcedPlay?.playerId === bot.id && bot.hand.find((item) => next.forcedPlay.cardIds.includes(item.uid));
+        const avoidEpiscop = episcopWouldAwardRelicToOther(next, bot.id);
         const powerfulSelfCard = bot.hand.find((item) => ['lord', 'knight'].includes(item.id) && bot.hand.some((other) => other.uid !== item.uid));
-        const card = forcedCard || powerfulSelfCard || bot.hand[0];
+        const safeCard = avoidEpiscop ? bot.hand.find((item) => item.id !== 'episcop') : bot.hand[0];
+        const card = forcedCard || powerfulSelfCard || safeCard || bot.hand[0];
         const highestScoringOpponent = [...next.players].filter((player) => player.id !== bot.id).sort((a, b) => score(b) - score(a))[0];
         const victoryLeader = [...next.players].sort((a, b) => score(b) - score(a))[0];
         const targetLeader = victoryLeader.id === bot.id ? highestScoringOpponent : victoryLeader;
