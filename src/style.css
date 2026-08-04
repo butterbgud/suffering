@@ -94,11 +94,13 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .draw-module .crossroad-cards { gap: clamp(8px, 2vw, 24px); }
 .hand-panel { grid-column: 2; grid-row: 1 / span 2; position: sticky; top: 10px; }
 .cities { grid-column: 1; grid-row: 2; }
+.play-column:not(:has(.hand-panel)) .cities { grid-row: 2; }
 .chronicle-bottom { width: min(1500px, 100%); margin: 18px auto 0; padding: 14px; border: 1px solid #82562d99; background: #170e0ddd; box-shadow: 0 10px 35px #0008; }
 .chronicle-bottom p { margin: 0; color: #d69a4b; font: 700 9px Unbounded, sans-serif; text-transform: uppercase; letter-spacing: .12em; }
 .chronicle-bottom small { display: block; margin-top: 9px; color: #c6aa7d; font-size: 14px; line-height: 1; }
 .draw-module { display: block; padding: 0; }
 .draw-module .crossroad-cards { justify-content: flex-start; align-items: center; margin: 0; padding: 0; }
+.draw-module.ready .card.back { border-color: #f3ca77; box-shadow: 0 0 0 3px #f3ca7766, 0 0 28px #e3a851cc, 3px 5px 10px #000a; animation: draw-pulse 1.5s ease-in-out infinite; }
 .card.zoomed { z-index: 100; transform: scale(1.8); box-shadow: 0 0 0 3px #f3ca77, 0 12px 35px #000e; }
 .card.small.zoomed { transform: scale(2.2); }
 .card.zoomed:hover { transform: scale(1.85); }
@@ -106,10 +108,23 @@ header { display: flex; align-items: center; justify-content: space-between; gap
   .play-column { grid-template-columns: 1fr; }
   .draw-module { grid-column: 1; }
   .hand-panel { grid-column: 1; grid-row: 2; position: static; }
-  .cities { grid-column: 1; grid-row: 3; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cities { grid-column: 1; grid-row: 3; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+  .cities.players-1 { grid-template-columns: 1fr; }
+  .cities.players-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cities.players-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media (max-width: 570px) {
   .draw-module .crossroad-cards { gap: 4px; padding-top: 0; }
   .draw-module .crossroad-cards .card { width: calc((100% - 12px) / 4); }
-  .cities { grid-template-columns: 1fr; }
+  .cities { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; }
+  .cities.players-1 { grid-template-columns: 1fr; }
+  .cities.players-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cities.players-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .city-head { padding: 5px 1px 7px; }
+  .city-head span { font-size: clamp(9px, 2.4vw, 14px); }
+  .lane { grid-template-columns: 1fr; gap: 1px; min-height: 56px; }
+  .lane label { padding-top: 3px; font-size: 9px; text-align: center; }
+  .residents { justify-content: center; }
+  .card.small { width: 43px; }
+  .residents .card { margin-right: -18px; }
 }
