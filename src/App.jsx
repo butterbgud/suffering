@@ -508,7 +508,7 @@ export default function App() {
       let pilgrims = player.city.filter((card) => card.crusade !== 0 && !(card.id === 'templar' && cityHasWomanOrAdaptable));
       // Standard Bearers have no personal crusade points, but join whenever
       // at least one other crusader leaves so their group bonus can apply.
-      if (pilgrims.length) pilgrims = [...pilgrims, ...player.city.filter((card) => card.id === 'standard_bearer' && !pilgrims.includes(card))];
+      pilgrims = [...pilgrims, ...player.city.filter((card) => card.id === 'standard_bearer' && !pilgrims.includes(card))];
       const knight = player.city.find((card) => card.id === 'knight');
       const squire = player.city.find((card) => card.id === 'weapon_bearer');
       const otherPilgrims = pilgrims.filter((card) => !['knight', 'weapon_bearer'].includes(card.id));
