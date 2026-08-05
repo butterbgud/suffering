@@ -38,6 +38,7 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .score-chart { margin-top: 10px; }.chart-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 12px; margin-bottom: 8px; color: #dec08b; font-size: 12px; }.chart-legend span { display: inline-flex; align-items: center; gap: 5px; }.chart-legend i { width: 9px; height: 9px; border-radius: 50%; }.score-chart svg { width: 100%; height: auto; overflow: visible; }.score-chart line { stroke: #8f623833; stroke-width: 1; }.score-chart .chart-axis { stroke: #b7844a; }.score-chart text { fill: #b99464; font: 11px 'IM Fell English', serif; text-anchor: end; }.score-chart .chart-turn { text-anchor: middle; }.score-chart .chart-label { fill: #d1a263; font-size: 12px; }.chart-series polyline { fill: none; stroke-width: 2.7; stroke-linejoin: round; stroke-linecap: round; }.chart-series circle { stroke: #25130b; stroke-width: 1.5; }
 .welcome h1, header h1 { display: none; }
 .lobby-meta { position: fixed; z-index: 2; top: 18px; left: 20px; display: grid; gap: 7px; justify-items: start; }
+.lobby-meta .option-group { display: none; }
 .lobby-options { display: flex; justify-content: space-between; gap: 18px; margin: 0 0 28px; padding-bottom: 16px; border-bottom: 1px solid #82562d66; }
 .option-group { display: grid; gap: 7px; color: #c99f64; font: 700 9px Unbounded, sans-serif; text-transform: uppercase; letter-spacing: .09em; }
 .segmented { display: flex; gap: 4px; }
