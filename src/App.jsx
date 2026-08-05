@@ -200,7 +200,7 @@ function ScoreChart({ history, players }) {
   </div>;
 }
 
-export default function App() {
+function App() {
   const [botCount, setBotCount] = useState(3);
   const [language, setLanguage] = useState('ru');
   const [gameSpeed, setGameSpeed] = useState(5);
@@ -951,4 +951,41 @@ export default function App() {
     {winner && <div className="ending"><div><p className="eyebrow">летописец поставил точку</p><h2>{winner.name} побеждает</h2><strong>{score(winner)} {game.language === 'en' ? 'VP' : 'ПО'}</strong><div className="scoreboard">{game.players.map((player) => <span key={player.id}><b>{player.name}</b><i>{residentCount(player)} жителей · <b className="score-total">{score(player)} {game.language === 'en' ? 'VP' : 'ПО'}</b> (<em className="vp-relic">{relicScore(player)}{game.language === 'en' ? 'H' : 'Р'}</em> + <em className="vp-resident">{residentScore(player)}{game.language === 'en' ? 'R' : 'Ж'}</em>) · {player.crusade} ✠ · {player.relics.length} реликв.</i></span>)}</div><div className="graph"><p>Победные очки по ходам</p><ScoreChart history={game.history} players={game.players} /></div><button onClick={() => setGame(freshGame(botCount, game.language ?? language, game.gameSpeed ?? gameSpeed))}>Ещё один год страданий</button></div></div>}
     {bugOpen && <div className="bug-modal" onClick={() => bugStatus !== 'sending' && setBugOpen(false)}><form onSubmit={(event) => { event.preventDefault(); submitBug(); }} onClick={(event) => event.stopPropagation()}><h2>Сообщить об ошибке</h2><p>К отчёту будет приложена последняя хроника партии.</p><textarea autoFocus value={bugText} onChange={(event) => setBugText(event.target.value)} placeholder="Что произошло? (необязательно)" maxLength="1200" />{bugStatus === 'sent' ? <strong className="bug-success">Отчёт отправлен. Спасибо!</strong> : bugStatus === 'failed' ? <strong className="bug-failed">Не удалось отправить отчёт.</strong> : null}<div><button type="button" onClick={() => setBugOpen(false)} disabled={bugStatus === 'sending'}>Отмена</button><button className="start" type="submit" disabled={bugStatus === 'sending'}>Отправить</button></div></form></div>}
   </main>;
+}
+
+class CrashBoundary extends React.Component {
+  state = { error: null };
+
+  componentDidMount() {
+    this.handleWindowError = (event) => this.capture(event.error || new Error(event.message));
+    this.handleUnhandledRejection = (event) => this.capture(event.reason instanceof Error ? event.reason : new Error(String(event.reason)));
+    window.addEventListener('error', this.handleWindowError);
+    window.addEventListener('unhandledrejection', this.handleUnhandledRejection);
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener('error', this.handleWindowError);
+    window.removeEventListener('unhandledrejection', this.handleUnhandledRejection);
+  }
+
+  componentDidCatch(error, info) {
+    this.capture(error, info?.componentStack);
+  }
+
+  capture(error, componentStack = '') {
+    const details = { message: error?.message || String(error), stack: error?.stack || '', componentStack, build: BUILD_VERSION, time: new Date().toISOString() };
+    console.error('Suffering crashed', details);
+    try { localStorage.setItem('suffering.lastCrash', JSON.stringify(details)); } catch { /* storage may be unavailable */ }
+    this.setState({ error: details });
+  }
+
+  render() {
+    if (!this.state.error) return this.props.children;
+    const { error } = this.state;
+    return <main className="crash-screen"><div><p className="eyebrow">Suffering encountered a problem</p><h1>Game interrupted</h1><p>The error was saved locally. Send this information with a bug report if it happens again.</p><pre>{JSON.stringify(error, null, 2)}</pre><button onClick={() => window.location.reload()}>Reload game</button></div></main>;
+  }
+}
+
+export default function AppWithCrashBoundary() {
+  return <CrashBoundary><App /></CrashBoundary>;
 }

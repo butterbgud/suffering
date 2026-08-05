@@ -135,6 +135,12 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .destination-cancel { margin-top: 15px; }
 .discard-choice-cards { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 18px; }
 .discard-choice-cards .card { width: 100px; }
+.crash-screen { min-height: 100vh; display: grid; place-items: center; padding: 20px; background: #100b0d; }
+.crash-screen > div { width: min(900px, 100%); padding: 28px; border: 1px solid #a65d52; background: #241619; box-shadow: 0 18px 60px #000; }
+.crash-screen h1 { margin-bottom: 14px; color: #f3d098; font-size: clamp(38px, 7vw, 72px); }
+.crash-screen p:not(.eyebrow) { color: #d1b18a; }
+.crash-screen pre { max-height: 45vh; overflow: auto; padding: 14px; color: #f1c6b8; background: #120b0d; white-space: pre-wrap; overflow-wrap: anywhere; }
+.crash-screen button { padding: 12px 16px; color: #1c110a; border: 0; background: #dfaa5a; cursor: pointer; font: 700 11px Unbounded, sans-serif; text-transform: uppercase; }
 .wheel-ribbon-viewport { position: absolute; inset: 0; overflow: hidden; }
 .wheel-ribbon { display: flex; height: 100%; transition: transform .45s cubic-bezier(.22,.8,.25,1); }
 .wheel-ribbon-card { flex: 0 0 100%; min-width: 0; display: flex; flex-direction: column; justify-content: center; padding: 18px 88px 10px; overflow: auto; }
