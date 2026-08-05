@@ -684,16 +684,16 @@ export default function App() {
       if (owner.bot) {
         const roundBefore = next.crusadeRound;
         let sent = 0;
-        for (const resident of recruits) {
+        for (const resident of recruits.slice(0, 2)) {
           sent += sendResidentOnCrusade(next, target, resident, Math.max(0, resident.vp));
           if (next.crusadeRound !== roundBefore) break;
         }
         if (sent) activate(`отправляет мирных жителей в Поход за ${sent} очк.`);
         if (next.crusadeRound !== roundBefore) activate('Святая Земля достигла лимита — распределена Реликвия.');
       } else if (recruits.length) {
-        next.pendingChoice = { ability: card.id, actorId: ownerId, targetId, cardUid: card.uid, recruitIds: recruits.map((resident) => resident.uid) };
+        next.pendingChoice = { ability: card.id, actorId: ownerId, targetId, cardUid: card.uid, recruitIds: recruits.slice(0, 2).map((resident) => resident.uid) };
         next.phase = 'choice';
-        activate('выбери мирного жителя для Похода или пропусти способность.');
+        activate('выбери до двух мирных жителей для Похода или остановись в любой момент.');
       }
     } else if (card.id === 'jester') {
       const crossroadsCard = next.crossroads.find((item) => !item.epidemic);
