@@ -326,7 +326,7 @@ export default function App() {
         resolveEntryAbility(next, choice.actorId, choice.targetId, resident);
       }
       next.phase = next.pendingChoice ? 'choice' : 'play';
-      if (!next.forcedPlay && !actor.hand.length && next.current === actor.id) endTurn(next);
+      if (!next.pendingChoice && !next.forcedPlay && !actor.hand.length && next.current === actor.id) endTurn(next);
     });
     setNotice('Выбор применён.');
   }
@@ -355,14 +355,14 @@ export default function App() {
       const choice = next.pendingChoice;
       const copied = next.crossroads[index];
       const actor = next.players[choice.actorId];
+      next.pendingChoice = null;
+      next.phase = 'play';
       if (copied.id === 'jester') next.log.unshift(`✦ ${actor.name} выбирает Шута, но его способность не зацикливается.`);
       else {
         next.log.unshift(`✦ Шут копирует мгновенное свойство «${copied.title}».`);
         resolveEntryAbility(next, choice.actorId, choice.targetId, copied);
       }
-      next.pendingChoice = null;
-      if (next.phase === 'choice') next.phase = 'play';
-      if (!next.forcedPlay && !actor.hand.length && next.current === actor.id) endTurn(next);
+      if (!next.pendingChoice && !next.forcedPlay && !actor.hand.length && next.current === actor.id) endTurn(next);
     });
     setNotice('Способность карты с Перекрёстка применена.');
   }
@@ -379,7 +379,7 @@ export default function App() {
       next.pendingChoice = null;
       next.phase = 'play';
       next.log.unshift(`✦ ${actor.name} выбирает «${victim.title}» на Перекрёстке для сброса.`);
-      if (!next.forcedPlay && !actor.hand.length && next.current === actor.id) endTurn(next);
+      if (!next.pendingChoice && !next.forcedPlay && !actor.hand.length && next.current === actor.id) endTurn(next);
     });
     setNotice('Арбалетчик сбросил выбранную карту.');
   }
@@ -399,7 +399,7 @@ export default function App() {
       next.pendingChoice = null;
       next.phase = 'play';
       next.log.unshift(`${actor.name} меняет «${resident.title}» на «${replacement.title}» с Перекрёстка.`);
-      if (!next.forcedPlay && !actor.hand.length && next.current === actor.id) endTurn(next);
+      if (!next.pendingChoice && !next.forcedPlay && !actor.hand.length && next.current === actor.id) endTurn(next);
     });
     setNotice('Заяц обменял выбранных персонажей.');
   }
