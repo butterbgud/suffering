@@ -128,12 +128,15 @@ function City({ player, active, selectedCard, onPlace, infections = [], plaguePr
 
 function CityWheel({ players, currentId, wheelPlayer, setWheelPlayer, cityProps, hand = [], crossroads = [], onHandSelect, canSelectHand = false, onCrossroadSelect, canSelectCrossroad }) {
   const shown = players[wheelPlayer] || players[0];
+  const drawnCard = hand.find((card) => card.drawnFromDeck);
+  const handCards = hand.filter((card) => !card.drawnFromDeck);
   const moveWheel = (direction) => setWheelPlayer((index) => (index + direction + players.length) % players.length);
   return <section className="wheel-view">
     <div className="wheel-stage" style={{ '--city-bg': `url(${shown.background})` }}>
       <button className="wheel-arrow wheel-arrow-left" onClick={() => moveWheel(-1)} aria-label="Предыдущий город">‹</button>
       <button className="wheel-arrow wheel-arrow-right" onClick={() => moveWheel(1)} aria-label="Следующий город">›</button>
-      <div className="wheel-hand"><div className="wheel-section-label">{cityProps.language === 'en' ? 'Your hand' : 'Твоя рука'}</div><div className="wheel-hand-cards">{hand.map((card) => <Card card={card} key={card.uid} selected={cityProps.selectedCard?.uid === card.uid} selectable={canSelectHand} selectLabel={cityProps.language === 'en' ? 'Select' : 'Выбрать'} onSelect={() => onHandSelect?.(card)} />)}</div></div>
+      {drawnCard && <div className="wheel-drawn-card"><Card card={drawnCard} selected={cityProps.selectedCard?.uid === drawnCard.uid} selectable={canSelectHand} selectLabel={cityProps.language === 'en' ? 'Select' : 'Выбрать'} onSelect={() => onHandSelect?.(drawnCard)} /></div>}
+      <div className="wheel-hand"><div className="wheel-section-label">{cityProps.language === 'en' ? 'Your hand' : 'Твоя рука'}</div><div className="wheel-hand-cards">{handCards.map((card) => <Card card={card} key={card.uid} selected={cityProps.selectedCard?.uid === card.uid} selectable={canSelectHand} selectLabel={cityProps.language === 'en' ? 'Select' : 'Выбрать'} onSelect={() => onHandSelect?.(card)} />)}</div></div>
       <div className="wheel-ribbon-viewport"><div className="wheel-ribbon" style={{ transform: `translateX(-${wheelPlayer * 100}%)` }}>{players.map((player) => <article className="wheel-ribbon-card" key={player.id}><City {...cityProps} player={player} active={player.id === currentId} onPlace={() => cityProps.onPlace(player.id)} residentTarget={(resident) => cityProps.residentTarget(player.id, resident)} /></article>)}</div></div>
       <div className="wheel-crossroads"><div className="wheel-section-label">{cityProps.language === 'en' ? 'Crossroads' : 'Перекрёсток'}</div><div className="crossroad-cards">{crossroads.map((card, index) => <Card card={card} key={card.uid} targetable={canSelectCrossroad?.(card)} selectable={canSelectCrossroad?.(card)} selectLabel={cityProps.language === 'en' ? 'Select' : 'Выбрать'} onSelect={() => onCrossroadSelect?.(index)} />)}</div></div>
     </div>
@@ -248,6 +251,8 @@ function App() {
     update((next) => {
       const card = next.deck.shift();
       if (!card) return finish(next);
+      next.players[next.current].hand.forEach((item) => { item.drawnFromDeck = false; });
+      card.drawnFromDeck = true;
       next.players[next.current].hand.push(card);
       next.phase = 'draw-crossroads';
     });
@@ -889,6 +894,8 @@ function App() {
       const bot = next.players[next.current];
       if (next.phase === 'draw-deck') {
         const card = next.deck.shift(); if (!card) return finish(next);
+        bot.hand.forEach((item) => { item.drawnFromDeck = false; });
+        card.drawnFromDeck = true;
         bot.hand.push(card); next.phase = 'draw-crossroads';
       } else if (next.phase === 'draw-crossroads') {
         const avoidEpiscop = episcopWouldAwardRelicToOther(next, bot.id);
@@ -927,6 +934,8 @@ function App() {
       update((next) => {
         const card = next.deck.shift();
         if (!card) return finish(next);
+        next.players[next.current].hand.forEach((item) => { item.drawnFromDeck = false; });
+        card.drawnFromDeck = true;
         next.players[next.current].hand.push(card);
         next.phase = 'draw-crossroads';
       });
