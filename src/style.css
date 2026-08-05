@@ -110,6 +110,8 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .score-total { color: #f3d098; }
 .wheel-view { grid-column: 1; grid-row: 3; min-width: 0; }
 .wheel-stage { position: relative; min-height: max(520px, calc(100svh - 170px)); overflow: hidden; border: 1px solid #8c5b2d99; background-image: var(--city-bg); background-position: center; background-size: cover; }
+.wheel-mode { background: var(--wheel-bg) center / cover fixed; }
+.wheel-mode .wheel-stage { border-color: #8c5b2d99; box-shadow: 0 12px 45px #0009; }
 .wheel-ribbon-viewport { position: absolute; inset: 0; overflow: hidden; }
 .wheel-ribbon { display: flex; height: 100%; transition: transform .45s cubic-bezier(.22,.8,.25,1); }
 .wheel-ribbon-card { flex: 0 0 100%; min-width: 0; display: flex; flex-direction: column; justify-content: center; padding: 18px 88px 10px; overflow: auto; }
