@@ -25,6 +25,9 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .crusade-meter { position: relative; width: 155px; overflow: hidden; padding: 8px 10px; border: 1px solid #916033; background: #160e0bd9; }
 .crusade-meter span { position: relative; z-index: 1; display: block; color: #d09a50; font: 700 7px Unbounded, sans-serif; text-transform: uppercase; letter-spacing: .08em; }
 .crusade-meter strong { position: relative; z-index: 1; color: #f1d49d; font-size: 21px; }.crusade-meter small { color: #bd9664; font-size: 11px; }
+.wheel-player-meta { position: relative; z-index: 1; display: block; margin-top: 3px; color: #f1d49d; font: 700 9px Unbounded, sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wheel-mode .crusade-meter { width: 180px; }
+.wheel-mode .crusade-meter strong { font-size: 12px; white-space: nowrap; }
 .crusade-meter i { position: absolute; bottom: 0; left: 0; height: 3px; background: #e3a851; transition: width .4s; }
 .ending > div { width: min(610px, 100%); max-height: 94vh; overflow: auto; padding: 36px 25px; }.ending strong { margin: 18px; }
 .scoreboard { display: grid; gap: 5px; margin: 15px 0 22px; padding: 10px; border-block: 1px solid #81532d; text-align: left; }.scoreboard span { display: flex; justify-content: space-between; gap: 10px; color: #e3c38d; }.scoreboard b { font-size: 16px; }.scoreboard i { color: #ba905d; font-size: 13px; font-style: normal; }
@@ -113,6 +116,7 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .wheel-mode { min-height: 100svh; height: 100svh; overflow: hidden; box-sizing: border-box; background: var(--wheel-bg) center / cover fixed; }
 .wheel-mode .wheel-stage { height: calc(100svh - 220px); min-height: 0; border: 0; background-image: none; box-shadow: none; }
 .wheel-mode .wheel-ribbon-card, .wheel-mode .wheel-city { overflow: hidden; }
+.wheel-mode .city-head { display: none; }
 .wheel-mode .draw-module { position: fixed; z-index: 12; right: 18px; bottom: 14px; left: 18px; display: block; pointer-events: none; }
 .wheel-mode .draw-module .crossroad-cards { justify-content: center; pointer-events: auto; }
 .game-shell:not(.wheel-mode) .draw-module .crossroad-cards > .card.back { display: none; }
