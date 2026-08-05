@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { buildDeck, shuffle } from './cards.js';
 
 const BUILD_VERSION = __BUILD_VERSION__;
@@ -95,12 +96,12 @@ function Card({ card, small = false, onClick, onSelect, selected, targetable = f
     <button className={`card ${small ? 'small' : ''} ${selected ? 'selected' : ''} ${targetable ? 'targetable' : ''} ${card.epidemic ? 'epidemic' : ''}`} onClick={handleClick} title={`${card.title}: ${card.effect}`}>
       <img src={card.art} alt={card.title} />
     </button>
-    {zoomed && <div className="card-modal" role="dialog" aria-label={card.title} onClick={() => setZoomed(false)}>
+    {zoomed && createPortal(<div className="card-modal" role="dialog" aria-label={card.title} onClick={() => setZoomed(false)}>
       <div className="card-modal-content">
         <button className="card card-modal-card" onClick={() => setZoomed(false)} title="Закрыть просмотр"><img src={card.art} alt={card.title} /></button>
         {selectable && <button className="card-select" onClick={confirm}>{selectLabel}</button>}
       </div>
-    </div>}
+    </div>, document.body)}
   </>;
 }
 
@@ -121,20 +122,37 @@ function City({ player, active, selectedCard, onPlace, infections = [], plaguePr
   </section>;
 }
 
-function CityWheel({ players, currentId, wheelPlayer, setWheelPlayer, cityProps, hand = [], onHandSelect, canSelectHand = false }) {
+function CityWheel({ players, currentId, wheelPlayer, setWheelPlayer, cityProps, hand = [], crossroads = [], onHandSelect, canSelectHand = false, onCrossroadSelect, canSelectCrossroad }) {
   const shown = players[wheelPlayer] || players[0];
   const moveWheel = (direction) => setWheelPlayer((index) => (index + direction + players.length) % players.length);
-  const sideCards = hand.slice(0, 2);
   return <section className="wheel-view">
     <div className="wheel-stage" style={{ '--city-bg': `url(/assets/ui/c${Math.min(wheelPlayer + 1, 5)}.webp)` }}>
       <button className="wheel-arrow wheel-arrow-left" onClick={() => moveWheel(-1)} aria-label="Предыдущий город">‹</button>
       <button className="wheel-arrow wheel-arrow-right" onClick={() => moveWheel(1)} aria-label="Следующий город">›</button>
-      {sideCards[0] && <div className="wheel-side-card wheel-side-card-left"><Card card={sideCards[0]} selected={cityProps.selectedCard?.uid === sideCards[0].uid} selectable={canSelectHand} selectLabel={cityProps.language === 'en' ? 'Select' : 'Выбрать'} onSelect={() => onHandSelect?.(sideCards[0])} /></div>}
-      {sideCards[1] && <div className="wheel-side-card wheel-side-card-right"><Card card={sideCards[1]} selected={cityProps.selectedCard?.uid === sideCards[1].uid} selectable={canSelectHand} selectLabel={cityProps.language === 'en' ? 'Select' : 'Выбрать'} onSelect={() => onHandSelect?.(sideCards[1])} /></div>}
+      <div className="wheel-hand"><div className="wheel-section-label">{cityProps.language === 'en' ? 'Your hand' : 'Твоя рука'}</div><div className="wheel-hand-cards">{hand.map((card) => <Card card={card} key={card.uid} selected={cityProps.selectedCard?.uid === card.uid} selectable={canSelectHand} selectLabel={cityProps.language === 'en' ? 'Select' : 'Выбрать'} onSelect={() => onHandSelect?.(card)} />)}</div></div>
       <div className="wheel-ribbon-viewport"><div className="wheel-ribbon" style={{ transform: `translateX(-${wheelPlayer * 100}%)` }}>{players.map((player) => <article className="wheel-ribbon-card" key={player.id}><City {...cityProps} player={player} active={player.id === currentId} onPlace={() => cityProps.onPlace(player.id)} residentTarget={(resident) => cityProps.residentTarget(player.id, resident)} /></article>)}</div></div>
+      <div className="wheel-crossroads"><div className="wheel-section-label">{cityProps.language === 'en' ? 'Crossroads' : 'Перекрёсток'}</div><div className="crossroad-cards">{crossroads.map((card, index) => <Card card={card} key={card.uid} targetable={canSelectCrossroad?.(card)} selectable={canSelectCrossroad?.(card)} selectLabel={cityProps.language === 'en' ? 'Select' : 'Выбрать'} onSelect={() => onCrossroadSelect?.(index)} />)}</div></div>
     </div>
     <div className="wheel-caption">{shown.name} · city {wheelPlayer + 1} / {players.length}</div>
   </section>;
+}
+
+function PlayDestinationModal({ game, card, language, onOwnCity, onOtherCity, onClose }) {
+  const english = language === 'en';
+  const [showOthers, setShowOthers] = useState(false);
+  const others = game.players.filter((player) => player.id !== game.current);
+  const composition = (player) => {
+    const counts = player.city.reduce((result, resident) => { result[resident.estate] = (result[resident.estate] || 0) + 1; return result; }, {});
+    return `${counts.дворяне || 0} / ${counts.священники || 0} / ${counts.простолюдины || 0}`;
+  };
+  return createPortal(<div className="destination-modal" role="dialog" aria-label={english ? 'Choose destination' : 'Выбор города'} onClick={onClose}>
+    <div className="destination-panel" onClick={(event) => event.stopPropagation()}>
+      <h2>{english ? 'Where should this card go?' : 'Куда отправить карту?'}</h2><p className="destination-card-name">«{card.title}»</p>
+      <div className="destination-actions"><button onClick={onOwnCity}>{english ? 'Play in your city' : 'Разыграть в своём городе'}</button><button onClick={() => setShowOthers(true)}>{english ? 'Send to another city' : 'Отправить в другой город'}</button></div>
+      {showOthers && <div className="opponent-list">{others.map((player) => <button className="opponent-choice" key={player.id} onClick={() => onOtherCity(player.id)}><strong>{player.name}</strong><span>{score(player)} {english ? 'VP' : 'ПО'} · {player.city.length} {english ? 'residents' : 'жит.'}</span><small>{english ? 'Nobles / clergy / commoners' : 'Дворяне / священники / простолюдины'}: {composition(player)}</small></button>)}</div>}
+      <button className="destination-cancel" onClick={onClose}>{english ? 'Cancel' : 'Отмена'}</button>
+    </div>
+  </div>, document.body);
 }
 
 function ScoreChart({ history, players }) {
@@ -176,6 +194,7 @@ export default function App() {
   const [wheelPlayer, setWheelPlayer] = useState(0);
   const [game, setGame] = useState(null);
   const [selected, setSelected] = useState(null);
+  const [destinationOpen, setDestinationOpen] = useState(false);
   const [notice, setNotice] = useState('');
   const [logOpen, setLogOpen] = useState(false);
   const [bugOpen, setBugOpen] = useState(false);
@@ -244,7 +263,18 @@ export default function App() {
     }
     update((next) => play(next, next.current, selected, targetId));
     setSelected(null);
+    setDestinationOpen(false);
   }
+
+  function selectHandCard(card) {
+    if (game.current !== 0 || game.phase !== 'play' || game.pendingChoice) return;
+    setSelected(card);
+    if (viewMode === 'wheel') setDestinationOpen(true);
+  }
+
+  useEffect(() => {
+    if (viewMode === 'wheel' && selected && game?.current === 0 && game.phase === 'play') setDestinationOpen(true);
+  }, [selected, viewMode, game?.current, game?.phase]);
 
   function canChooseResident(playerId, resident) {
     const choice = game?.pendingChoice;
