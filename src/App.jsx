@@ -159,6 +159,16 @@ function PlayDestinationModal({ game, card, language, onOwnCity, onOtherCity, on
   </div>, document.body);
 }
 
+function NecromancerModal({ cards, language, onChoose }) {
+  const english = language === 'en';
+  return createPortal(<div className="destination-modal" role="dialog" aria-label={english ? 'Choose a discarded card' : 'Выбор карты из сброса'}>
+    <div className="destination-panel discard-choice-panel">
+      <h2>{english ? 'Choose a card to resurrect' : 'Выбери карту для возвращения'}</h2>
+      <div className="discard-choice-cards">{cards.map((card) => <Card card={card} key={card.uid} selectable selectLabel={english ? 'Resurrect' : 'Вернуть'} onSelect={() => onChoose(card.uid)} />)}</div>
+    </div>
+  </div>, document.body);
+}
+
 function ScoreChart({ history, players }) {
   const width = 520;
   const height = 230;
@@ -211,9 +221,10 @@ export default function App() {
     if (!current) return undefined;
     // Let the finished bot's city remain visible briefly so its played cards
     // can be inspected before the ribbon follows the next turn.
-    const timer = setTimeout(() => setWheelPlayer(current.id), game?.current === 0 ? 0 : 1400);
+    const focusId = game?.pendingChoice?.targetId ?? current.id;
+    const timer = setTimeout(() => setWheelPlayer(focusId), game?.current === 0 ? 0 : 1400);
     return () => clearTimeout(timer);
-  }, [current?.id, game?.current]);
+  }, [current?.id, game?.current, game?.pendingChoice?.targetId]);
   const update = (mutate) => setGame((previous) => {
     const next = structuredClone(previous);
     mutate(next);
@@ -329,6 +340,28 @@ export default function App() {
       if (!next.pendingChoice && !next.forcedPlay && !actor.hand.length && next.current === actor.id) endTurn(next);
     });
     setNotice('Выбор применён.');
+  }
+
+  function chooseNecromancer(cardUid) {
+    const choice = game?.pendingChoice;
+    if (!choice || choice.ability !== 'heretic-necro' || !choice.cardIds.includes(cardUid)) return;
+    update((next) => {
+      const currentChoice = next.pendingChoice;
+      const actor = next.players[currentChoice.actorId];
+      const target = next.players[currentChoice.targetId];
+      const resurrected = next.discard.find((card) => card.uid === cardUid);
+      const sacrifice = actor.hand.find((card) => card.uid !== currentChoice.cardUid);
+      if (!resurrected || !sacrifice) return;
+      actor.hand = actor.hand.filter((card) => card.uid !== sacrifice.uid);
+      next.discard.push(sacrifice);
+      next.discard = next.discard.filter((card) => card.uid !== resurrected.uid);
+      target.city.push(resurrected);
+      next.pendingChoice = null;
+      next.phase = 'play';
+      next.log.unshift(`✦ ${actor.name} жертвует «${sacrifice.title}» и возвращает «${resurrected.title}» из сброса.`);
+      if (!next.forcedPlay && !actor.hand.length && next.current === actor.id) endTurn(next);
+    });
+    setNotice('Некромант вернул выбранную карту.');
   }
 
   function skipRecruiter() {
@@ -712,8 +745,21 @@ export default function App() {
       }
     } else if (card.id === 'heretic-necro') {
       const sacrifice = owner.hand.find((item) => item.uid !== card.uid);
-      const resurrected = next.discard.slice(-5).find((item) => !item.epidemic);
-      if (sacrifice && resurrected) { owner.hand = owner.hand.filter((item) => item.uid !== sacrifice.uid); next.discard.push(sacrifice); next.discard = next.discard.filter((item) => item.uid !== resurrected.uid); target.city.push(resurrected); activate(`сбрасывает карту и возвращает «${resurrected.title}» из сброса.`); }
+      const resurrectable = next.discard.slice(-5).filter((item) => !item.epidemic);
+      if (sacrifice && resurrectable.length) {
+        if (owner.bot) {
+          const resurrected = resurrectable[resurrectable.length - 1];
+          owner.hand = owner.hand.filter((item) => item.uid !== sacrifice.uid);
+          next.discard.push(sacrifice);
+          next.discard = next.discard.filter((item) => item.uid !== resurrected.uid);
+          target.city.push(resurrected);
+          activate(`сбрасывает карту и возвращает «${resurrected.title}» из сброса.`);
+        } else {
+          next.pendingChoice = { ability: card.id, actorId: ownerId, targetId, cardUid: card.uid, cardIds: resurrectable.map((item) => item.uid) };
+          next.phase = 'choice';
+          activate('выбери карту из последних пяти карт сброса для возвращения.');
+        }
+      }
     }
     if (WOMEN.has(card.id) && mutilator) {
       const destination = Array.from({ length: next.players.length - 1 }, (_, step) => next.players[(targetId + step + 1) % next.players.length])
@@ -894,8 +940,9 @@ export default function App() {
   const winner = game.ended ? [...game.players].sort((a, b) => score(b) - score(a))[0] : null;
   return <main className={`game-shell ${viewMode === 'wheel' ? 'wheel-mode' : ''}`} style={viewMode === 'wheel' ? { '--wheel-bg': `url(${game.players[wheelPlayer]?.background})` } : undefined}>
     <header><div className="brand"><small className="build-version">#{BUILD_VERSION}</small><div className="header-actions"><button className="log-toggle" title="Показать/скрыть хронику" aria-label="Показать/скрыть хронику" onClick={() => setLogOpen((open) => !open)}>Л</button><button className="view-toggle" title="Переключить вид городов" aria-label="Переключить вид городов" onClick={() => setViewMode((mode) => mode === 'overview' ? 'wheel' : 'overview')}>{viewMode === 'overview' ? '◉' : '▦'}</button><button className="report-button" title="Сообщить об ошибке" aria-label="Сообщить об ошибке" onClick={() => { setBugStatus(''); setBugOpen(true); }}>{game.language === 'en' ? 'B' : 'Б'}</button></div></div><div className="crusade-meter"><span>Святая земля · поход {Math.min(game.crusadeRound, 3)}/3</span><strong>{game.crusadeRound <= 3 ? game.crusadePool : 'захвачена'} {game.crusadeRound <= 3 && <small>/ {game.crusadeLimit}</small>}</strong><i style={{ width: `${game.crusadeRound <= 3 ? (game.crusadePool / game.crusadeLimit) * 100 : 0}%` }} /></div></header>
-    {game.pendingChoice && <div className="resident-choice"><strong>{game.pendingChoice.ability === 'heretic-alch' ? 'Еретик-алхимик' : game.pendingChoice.ability === 'heretic-science' ? 'Еретик-натуралист' : game.pendingChoice.ability === 'inquisitor' ? 'Инквизитор' : game.pendingChoice.ability === 'recruit' ? 'Рекрутёр' : game.pendingChoice.ability === 'hare' ? 'Заяц' : game.pendingChoice.ability === 'possesed' ? 'Одержимый' : game.pendingChoice.ability === 'crossbowman' ? 'Арбалетчик' : 'Шут'} требует выбора</strong><span>{game.pendingChoice.ability === 'heretic-alch' ? 'Нажми на жителя, которого уничтожить.' : game.pendingChoice.ability === 'heretic-science' ? 'Нажми на жителя, которого переместить.' : game.pendingChoice.ability === 'inquisitor' ? 'Нажми на жителя в своём городе для казни.' : game.pendingChoice.ability === 'recruit' ? 'Нажми на мирного жителя, чтобы отправить его в Поход, или пропусти.' : game.pendingChoice.ability === 'hare' ? 'Нажми на жителя, которого обменять.' : game.pendingChoice.ability === 'possesed' ? 'Нажми на жителя, чью способность повторить.' : game.pendingChoice.ability === 'crossbowman' ? 'Нажми на карту Перекрёстка, которую сбросить.' : 'Нажми на любую карту Перекрёстка, чтобы скопировать её свойство.'}</span>{game.pendingChoice.ability === 'recruit' && <button type="button" onClick={skipRecruiter}>Пропустить</button>}</div>}
+    {game.pendingChoice && <div className="resident-choice"><strong>{game.pendingChoice.ability === 'heretic-alch' ? 'Еретик-алхимик' : game.pendingChoice.ability === 'heretic-science' ? 'Еретик-натуралист' : game.pendingChoice.ability === 'heretic-necro' ? 'Еретик-некромант' : game.pendingChoice.ability === 'inquisitor' ? 'Инквизитор' : game.pendingChoice.ability === 'recruit' ? 'Рекрутёр' : game.pendingChoice.ability === 'hare' ? 'Заяц' : game.pendingChoice.ability === 'possesed' ? 'Одержимый' : game.pendingChoice.ability === 'crossbowman' ? 'Арбалетчик' : 'Шут'} требует выбора</strong><span>{game.pendingChoice.ability === 'heretic-alch' ? 'Нажми на жителя, которого уничтожить.' : game.pendingChoice.ability === 'heretic-science' ? 'Нажми на жителя, которого переместить.' : game.pendingChoice.ability === 'heretic-necro' ? 'Выбери карту из последних пяти карт сброса.' : game.pendingChoice.ability === 'inquisitor' ? 'Нажми на жителя в своём городе для казни.' : game.pendingChoice.ability === 'recruit' ? 'Нажми на мирного жителя, чтобы отправить его в Поход, или пропусти.' : game.pendingChoice.ability === 'hare' ? 'Нажми на жителя, которого обменять.' : game.pendingChoice.ability === 'possesed' ? 'Нажми на жителя, чью способность повторить.' : game.pendingChoice.ability === 'crossbowman' ? 'Нажми на карту Перекрёстка, которую сбросить.' : 'Нажми на любую карту Перекрёстка, чтобы скопировать её свойство.'}</span>{game.pendingChoice.ability === 'recruit' && <button type="button" onClick={skipRecruiter}>Пропустить</button>}</div>}
     <section className="table"><div className="play-column"><section className={`draw-module ${game.phase === 'draw-deck' ? 'ready' : ''}`}><div className="crossroad-cards">{viewMode !== 'wheel' && <Card faceDown directClick onClick={drawDeck} />}{game.crossroads.map((card, index) => <Card card={card} key={card.uid} targetable={canChooseCrossroad(card)} selectable={game.phase === 'draw-crossroads' || canChooseCrossroad(card)} selectLabel={game.language === 'en' ? 'Select' : 'Выбрать'} onSelect={() => game.pendingChoice?.ability === 'jester' ? chooseCrossroad(index) : game.pendingChoice?.ability === 'crossbowman' ? chooseCrossbowmanCrossroad(index) : game.pendingChoice?.ability === 'hare' ? chooseHareCrossroad(index) : drawCrossroads(index)} />)}</div></section>{game.current === 0 && viewMode === 'overview' && <aside className="side-panel hand-panel"><div className="section-title"><span>Твоя рука</span><small>{game.players[0].hand.length} карт</small></div><div className="hand">{game.players[0].hand.map((card) => <Card card={card} key={card.uid} selected={selected?.uid === card.uid} selectable={game.current === 0 && game.phase === 'play' && !game.pendingChoice} selectLabel={game.language === 'en' ? 'Select' : 'Выбрать'} onSelect={() => game.current === 0 && game.phase === 'play' && !game.pendingChoice && setSelected(card)} />)}</div><p className="hint">{notice || (game.pendingChoice ? 'Выделенные жители на поле кликабельны.' : game.forcedPlay?.playerId === 0 ? `Ведьма заставляет разыграть ещё ${game.forcedPlay.cardIds.length} карты немедленно.` : selected ? `«${selected.title}»: ${selected.effect} Нажми на город — мгновенный эффект будет отмечен в Хронике.` : 'Твои карты появятся здесь.')}</p></aside>}{viewMode === 'wheel' ? <CityWheel players={game.players} currentId={game.current} wheelPlayer={wheelPlayer} setWheelPlayer={setWheelPlayer} hand={game.players[0].hand} canSelectHand={game.current === 0 && game.phase === 'play' && !game.pendingChoice} onHandSelect={(card) => game.current === 0 && game.phase === 'play' && !game.pendingChoice && setSelected(card)} cityProps={{ language: game.language, selectedCard: selected, onPlace: () => place(wheelPlayer), infections: game.infections, plaguePreview, setPlaguePreview, residentTarget: (resident) => canChooseResident(wheelPlayer, resident), onResidentTarget: chooseResident }} /> : <section className={`cities players-${Math.min(game.players.length, 4)}`} style={{ '--player-count': game.players.length }}>{game.players.map((player) => <City key={player.id} player={player} language={game.language} active={player.id === game.current} selectedCard={selected} onPlace={() => place(player.id)} infections={game.infections} plaguePreview={plaguePreview} setPlaguePreview={setPlaguePreview} residentTarget={(resident) => canChooseResident(player.id, resident)} onResidentTarget={chooseResident} />)}</section>}</div></section>
+    {game.pendingChoice?.ability === 'heretic-necro' && <NecromancerModal cards={game.discard.slice(-5).filter((card) => game.pendingChoice.cardIds.includes(card.uid))} language={game.language} onChoose={chooseNecromancer} />}
     {destinationOpen && selected && <PlayDestinationModal game={game} card={selected} language={game.language} onOwnCity={() => place(game.current)} onOtherCity={(targetId) => place(targetId)} onClose={() => { setDestinationOpen(false); setSelected(null); }} />}
     {logOpen && <aside className="chronicle chronicle-bottom"><p>Хроника <i>{game.log.length}</i></p>{game.log.map((line, index) => <small key={`${line}-${index}`}>{line}</small>)}</aside>}
     {winner && <div className="ending"><div><p className="eyebrow">летописец поставил точку</p><h2>{winner.name} побеждает</h2><strong>{score(winner)} {game.language === 'en' ? 'VP' : 'ПО'}</strong><div className="scoreboard">{game.players.map((player) => <span key={player.id}><b>{player.name}</b><i>{residentCount(player)} жителей · <b className="score-total">{score(player)} {game.language === 'en' ? 'VP' : 'ПО'}</b> (<em className="vp-relic">{relicScore(player)}{game.language === 'en' ? 'H' : 'Р'}</em> + <em className="vp-resident">{residentScore(player)}{game.language === 'en' ? 'R' : 'Ж'}</em>) · {player.crusade} ✠ · {player.relics.length} реликв.</i></span>)}</div><div className="graph"><p>Победные очки по ходам</p><ScoreChart history={game.history} players={game.players} /></div><button onClick={() => setGame(freshGame(botCount, game.language ?? language, game.gameSpeed ?? gameSpeed))}>Ещё один год страданий</button></div></div>}

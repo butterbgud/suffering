@@ -133,6 +133,8 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .opponent-choice strong { color: #f3d098; font-size: 18px; }
 .opponent-choice span, .opponent-choice small { color: #d1b18a; }
 .destination-cancel { margin-top: 15px; }
+.discard-choice-cards { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 18px; }
+.discard-choice-cards .card { width: 100px; }
 .wheel-ribbon-viewport { position: absolute; inset: 0; overflow: hidden; }
 .wheel-ribbon { display: flex; height: 100%; transition: transform .45s cubic-bezier(.22,.8,.25,1); }
 .wheel-ribbon-card { flex: 0 0 100%; min-width: 0; display: flex; flex-direction: column; justify-content: center; padding: 18px 88px 10px; overflow: auto; }
