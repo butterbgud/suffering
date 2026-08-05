@@ -423,8 +423,11 @@ export default function App() {
     const priorityEstate = { cholera: 'простолюдины', leprosy: 'священники', malaria: 'дворяне' }[infection.card.id];
     candidates.sort((a, b) => (priorityEstate && a.estate === priorityEstate ? -1 : 0) - (priorityEstate && b.estate === priorityEstate ? -1 : 0) || (infection.card.id === 'black_pox' ? b.immunity - a.immunity : a.immunity - b.immunity));
     let victims = candidates.slice(0, infection.power);
-    const peasantVictim = victims.find((victim) => victim.id === 'peasant');
-    if (peasantVictim) victims = city.city.filter((resident) => resident.id === 'peasant' && !protectedIds.has(resident.id));
+    // Peasants die as a group: once any peasant is selected by any epidemic,
+    // every non-protected peasant in that city becomes a victim immediately.
+    if (victims.some((victim) => victim.id === 'peasant')) {
+      victims = city.city.filter((resident) => resident.id === 'peasant' && !protectedIds.has(resident.id));
+    }
     if (city.city.some((resident) => resident.id === 'cat') && victims.length) {
       const cat = city.city.find((resident) => resident.id === 'cat');
       city.city = city.city.filter((resident) => resident.uid !== cat.uid);
