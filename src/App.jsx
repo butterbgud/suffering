@@ -283,6 +283,7 @@ export default function App() {
   function canChooseResident(playerId, resident) {
     const choice = game?.pendingChoice;
     if (!choice || resident.uid === choice.cardUid || resident.id === 'corpse') return false;
+    if (!['heretic-alch', 'heretic-science', 'inquisitor', 'recruit', 'hare', 'possesed'].includes(choice.ability)) return false;
     if (choice.ability === 'hare' && choice.residentUid) return false;
     if (playerId !== choice.targetId) return false;
     if (choice.ability === 'recruit') return choice.recruitIds.includes(resident.uid) && resident.crusade <= 0;
