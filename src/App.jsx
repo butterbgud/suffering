@@ -616,7 +616,7 @@ function App() {
     return true;
   }
 
-  function sendResidentOnCrusade(next, player, resident, points = resident.crusade || Math.max(0, resident.vp)) {
+  function sendResidentOnCrusade(next, player, resident, points = resident.crusade || Math.max(0, resident.vp), recipient = player) {
     if (!resident) return 0;
     player.city = player.city.filter((item) => item.uid !== resident.uid);
     next.discard.push(resident);
@@ -625,7 +625,7 @@ function App() {
     // at zero; otherwise the threshold-crossing player would be unfairly
     // reduced to the last single point.
     const sent = Math.max(0, points);
-    player.crusade += sent;
+    recipient.crusade += sent;
     if (next.crusadeRound <= 3) next.crusadePool = Math.max(0, next.crusadePool - sent);
     resolveCrusadeRound(next);
     return sent;
@@ -652,7 +652,7 @@ function App() {
     if (card.id === 'lady') {
       const adjacent = adjacentPlayers(next, targetId).find((player) => player.city.some((resident) => resident.id === 'knight'));
       const knight = adjacent?.city.find((resident) => resident.id === 'knight');
-      if (knight) activate(`отправляет Рыцаря из города ${adjacent.name} в Поход за ${sendResidentOnCrusade(next, adjacent, knight)} очк.`);
+      if (knight) activate(`отправляет Рыцаря из города ${adjacent.name} в Поход за ${sendResidentOnCrusade(next, adjacent, knight, undefined, owner)} очк.`);
     } else if (card.id === 'driver') {
       const resident = target.city.find((item) => item.uid !== card.uid && item.estate === 'простолюдины');
       const adjacent = adjacentPlayers(next, targetId).find((player) => player.city.some((item) => item.estate === resident?.estate));
