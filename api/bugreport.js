@@ -1,4 +1,5 @@
 const DEFAULT_BUG_CHAT_ID = '-5260075189';
+const POLITIKUM_BUG_RELAY = 'https://politikum-solo.vercel.app/api/bugreport';
 
 const limit = (value, max) => String(value || '').slice(0, max);
 
@@ -7,8 +8,6 @@ export default async function handler(req, res) {
 
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_BUG_CHAT_ID || DEFAULT_BUG_CHAT_ID;
-  if (!token) return res.status(503).json({ error: 'Bug reporting is not configured' });
-
   const body = req.body || {};
   const text = limit(body.text, 1200) || '(none)';
   const history = Array.isArray(body.history)
@@ -27,12 +26,28 @@ export default async function handler(req, res) {
   ].join('\n').slice(0, 3900);
 
   try {
-    const telegram = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text: message }),
-    });
-    if (!telegram.ok) throw new Error(`Telegram returned ${telegram.status}`);
+    if (token) {
+      const telegram = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, text: message }),
+      });
+      if (!telegram.ok) throw new Error(`Telegram returned ${telegram.status}`);
+    } else {
+      const relay = await fetch(POLITIKUM_BUG_RELAY, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text,
+          version: body.version,
+          url: body.url,
+          userAgent: body.userAgent,
+          history,
+          debug: { project: 'suffering-reborn', channel: DEFAULT_BUG_CHAT_ID },
+        }),
+      });
+      if (!relay.ok) throw new Error(`Politikum relay returned ${relay.status}`);
+    }
     return res.status(200).json({ ok: true });
   } catch (error) {
     console.error('Suffering Reborn bug report delivery failed', error);
