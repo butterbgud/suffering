@@ -21,6 +21,7 @@ function freshGame(botCount, language = 'ru', gameSpeed = 5) {
     crossroads: deck.slice(0, 3),
     players,
     current: 0,
+    turn: 1,
     phase: 'draw-deck',
     infections: [],
     discard: [],
@@ -32,6 +33,7 @@ function freshGame(botCount, language = 'ru', gameSpeed = 5) {
     crusadeRound: 1,
     history: [{ label: 'начало', scores: players.map(score), crusade: players.map(() => 0) }],
     log: ['В городе пахнет дымом, навозом и возможностью.'],
+    playedCards: [],
     ended: false,
     language,
     gameSpeed,
@@ -238,7 +240,33 @@ function App() {
   async function submitBug() {
     setBugStatus('sending');
     try {
-      const response = await fetch('/api/bugreport', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: bugText, version: BUILD_VERSION, project: 'suffering-reborn', history: game?.log?.slice(-30) || [] }) });
+      const cardInfo = (card) => card ? {
+        id: card.id, uid: card.uid, title: card.title, type: card.type,
+        vp: card.vp, crusade: card.crusade, epidemic: !!card.epidemic,
+      } : null;
+      const debug = game ? {
+        phase: game.phase,
+        turn: game.turn,
+        currentPlayer: game.current,
+        currentPlayerName: game.players?.find((player) => player.id === game.current)?.name || null,
+        flags: { ended: !!game.ended, forcedPlay: !!game.forcedPlay, pendingChoice: !!game.pendingChoice },
+        pending: game.pendingChoice || null,
+        response: null,
+        deck: game.deck?.length || 0,
+        crossroads: (game.crossroads || []).map(cardInfo),
+        discard: (game.discard || []).slice(-30).map(cardInfo),
+        infections: (game.infections || []).map((infection) => ({ card: cardInfo(infection.card), host: infection.host, origin: infection.origin, power: infection.power })),
+        playedCards: (game.playedCards || []).slice(-60),
+        players: (game.players || []).map((player) => ({
+          id: player.id, name: player.name, isBot: !!player.bot,
+          handSize: player.hand?.length || 0,
+          hand: (player.hand || []).map(cardInfo),
+          city: (player.city || []).map(cardInfo),
+          crusade: player.crusade || 0,
+          relics: player.relics || [],
+        })),
+      } : null;
+      const response = await fetch('/api/bugreport', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: bugText, version: BUILD_VERSION, project: 'suffering-reborn', language: game?.language, url: window.location.href, userAgent: navigator.userAgent, history: (game?.log || []).slice(-30), debug, game: game ? { turn: game.turn, pending: game.pendingChoice?.ability || null, response: null, deck: game.deck?.length || 0 } : null }) });
       if (!response.ok) throw new Error('Bug report request failed');
       setBugStatus('sent');
     } catch {
@@ -502,6 +530,7 @@ function App() {
       return;
     }
     recordHistory(next, `ход ${next.history.length}`);
+    if (next.current === next.players.length - 1) next.turn = (next.turn || 1) + 1;
     next.current = (next.current + 1) % next.players.length;
     next.phase = 'draw-deck';
   }
@@ -852,6 +881,15 @@ function App() {
     const needsDiscardForOwnCity = ['lord', 'knight'].includes(card.id) && targetId === ownerId;
     const discardCost = needsDiscardForOwnCity && owner.hand.find((item) => item.uid !== card.uid);
     if (needsDiscardForOwnCity && !discardCost) return;
+    next.playedCards.push({
+      turn: next.turn || 1,
+      playerId: owner.id,
+      playerName: owner.name,
+      isBot: !!owner.bot,
+      targetId: target?.id ?? null,
+      targetName: target?.name || null,
+      card: { id: card.id, uid: card.uid, title: card.title, type: card.type, vp: card.vp, crusade: card.crusade, epidemic: !!card.epidemic },
+    });
     owner.hand.splice(handIndex, 1);
     if (discardCost) {
       owner.hand = owner.hand.filter((item) => item.uid !== discardCost.uid);

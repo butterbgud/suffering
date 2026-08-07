@@ -10,16 +10,22 @@ export default async function handler(req, res) {
   const chatId = process.env.TELEGRAM_BUG_CHAT_ID || DEFAULT_BUG_CHAT_ID;
   const body = req.body || {};
   const text = limit(body.text, 1200) || '(none)';
+  const state = body.game || {};
   const history = Array.isArray(body.history)
     ? body.history.slice(-30).map((line) => limit(line, 500))
     : [];
   const message = [
     '🐛 Suffering Reborn bug report',
     `Version: ${limit(body.version, 80) || 'unknown'}`,
+    `Language: ${body.language === 'en' ? 'English' : 'Russian'}`,
     `URL: ${limit(body.url, 500) || 'unknown'}`,
+    `State: turn ${limit(state.turn, 30) || '?'} · pending ${limit(state.pending, 100) || 'none'} · response ${limit(state.response, 100) || 'none'} · deck ${limit(state.deck, 30) || '?'}`,
     `Browser: ${limit(body.userAgent, 400) || 'unknown'}`,
     '',
     `Note: ${text}`,
+    '',
+    'Diagnostic snapshot:',
+    body.debug ? limit(JSON.stringify(body.debug), 9000) : '(no diagnostic snapshot)',
     '',
     'Recent history:',
     ...(history.length ? history : ['(no game history)']),
@@ -40,10 +46,12 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           text,
           version: body.version,
+          language: body.language,
           url: body.url,
           userAgent: body.userAgent,
           history,
-          debug: { project: 'suffering-reborn', channel: DEFAULT_BUG_CHAT_ID },
+          game: state,
+          debug: body.debug,
         }),
       });
       if (!relay.ok) throw new Error(`Politikum relay returned ${relay.status}`);
