@@ -823,15 +823,13 @@ function App() {
         activate(`лечит эпидемию в городе ${target.name}.`);
       } else activate(`в городе ${target.name} нет эпидемии — лечение не требуется.`);
     } else if (card.id === 'inquisitor') {
-      const botBurden = owner.bot && owner.city.filter((resident) => resident.uid !== card.uid && resident.vp < 0).sort((a, b) => a.vp - b.vp)[0];
-      const victim = botBurden ?? strongestResident(target, card.uid);
-      const victimCity = botBurden ? owner : target;
-      const anyVictim = owner.city.some((resident) => resident.uid !== card.uid && resident.id !== 'corpse');
+      const victim = strongestResident(target, card.uid);
+      const anyVictim = target.city.some((resident) => resident.uid !== card.uid && resident.id !== 'corpse');
       if (owner.bot && victim) {
           const wasHeretic = victim.id.startsWith('heretic-');
-          discardResident(next, victimCity, victim, `✦ Инквизитор ${owner.name} казнит жителя`);
+          discardResident(next, target, victim, `✦ Инквизитор ${owner.name} казнит жителя`);
           if (wasHeretic) { const drawn = next.deck.shift(); if (drawn) owner.hand.push(drawn); activate('убивает Еретика и берёт карту.'); }
-      } else if (!owner.bot && anyVictim) { next.pendingChoice = { ability: card.id, actorId: ownerId, targetId: ownerId, cardUid: card.uid }; next.phase = 'choice'; activate('выбери жителя в своём городе для казни.'); }
+      } else if (!owner.bot && anyVictim) { next.pendingChoice = { ability: card.id, actorId: ownerId, targetId, cardUid: card.uid }; next.phase = 'choice'; activate(`выбери жителя в городе ${target.name} для казни.`); }
       else activate('не находит жертву.');
     } else if (card.id === 'episcop') {
       activate('созывает общий Крестовый поход.'); triggerCrusade(next, targetId);
