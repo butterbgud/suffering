@@ -113,7 +113,10 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .lane { grid-template-columns: 1fr; }
 .lane label { display: none; }
 .city .card.small { width: 132px; }
-.city .guard-stack { width: 132px; flex-basis: 132px; height: 198px; }
+.city .guard-stack { position: relative; width: 132px; flex: 0 0 132px; height: 198px; margin-right: -30px; overflow: visible; }
+.city .guard-stack .guard-prisoner { top: 7px; left: -10px; width: 132px; height: 198px; pointer-events: none; }
+.city .guard-stack .guard-prisoner .card { width: 132px; }
+.city .guard-stack .guard-front { width: 132px; height: 198px; }
 .city.place-target { outline: 2px solid #f3ca77; box-shadow: 0 0 0 3px #f3ca7733, 0 0 28px #e3a851aa; cursor: pointer; }
 .city.place-target .city-head { cursor: pointer; }
 .vp-relic { color: #bc91e4; font-style: normal; }
@@ -201,6 +204,8 @@ header { display: flex; align-items: center; justify-content: space-between; gap
   .card.small { width: 43px; }
   .city .card.small { width: 86px; }
   .city .guard-stack { width: 86px; flex-basis: 86px; height: 129px; }
+  .city .guard-stack .guard-prisoner { width: 86px; height: 129px; }
+  .city .guard-stack .guard-prisoner .card, .city .guard-stack .guard-front { width: 86px; height: 129px; }
   .residents .card { margin-right: -18px; }
   .wheel-mode .wheel-stage { height: calc(100svh - 260px); min-height: 0; }
   .wheel-ribbon-viewport { inset: 0; }
