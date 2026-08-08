@@ -164,6 +164,22 @@ function PlayDestinationModal({ game, card, language, onOwnCity, onOtherCity, on
   </div>, document.body);
 }
 
+function MinstrelTargetModal({ game, actorId, language, onChoose }) {
+  const english = language === 'en';
+  const opponents = game.players.filter((player) => player.id !== actorId);
+  return createPortal(<div className="destination-modal" role="dialog" aria-label={english ? 'Choose a city to steal from' : 'Выбор города для кражи'}>
+    <div className="destination-panel">
+      <h2>{english ? 'Choose a city' : 'Выбери город'}</h2>
+      <p className="destination-card-name">{english ? 'Steal up to 3 CP' : 'Украсть до 3 очков Похода'}</p>
+      <div className="opponent-list">{opponents.map((player) => <button className="opponent-choice" key={player.id} onClick={() => onChoose(player.id)}>
+        <strong>{player.name}</strong>
+        <span>{score(player)} {english ? 'VP' : 'ПО'} · {player.crusade} CP</span>
+        <small>{english ? 'Choose this city as the theft target.' : 'Выбери этот город целью кражи.'}</small>
+      </button>)}</div>
+    </div>
+  </div>, document.body);
+}
+
 function NecromancerModal({ cards, language, onChoose }) {
   const english = language === 'en';
   return createPortal(<div className="destination-modal" role="dialog" aria-label={english ? 'Choose a discarded card' : 'Выбор карты из сброса'}>
@@ -400,6 +416,25 @@ function App() {
       if (!next.forcedPlay && !actor.hand.length && next.current === actor.id) endTurn(next);
     });
     setNotice('Некромант вернул выбранную карту.');
+  }
+
+  function chooseMinstrelTarget(targetId) {
+    if (game?.pendingChoice?.ability !== 'minstrel') return;
+    update((next) => {
+      const choice = next.pendingChoice;
+      const actor = next.players[choice.actorId];
+      const victim = next.players[targetId];
+      if (!actor || !victim || victim.id === actor.id) return;
+      const stolen = Math.min(3, Math.max(0, victim.crusade));
+      victim.crusade -= stolen;
+      actor.crusade += stolen;
+      next.pendingChoice = null;
+      next.phase = 'play';
+      next.log.unshift(stolen
+        ? `✦ Менестрель крадёт ${stolen} очк. Похода у города ${victim.name}.`
+        : `✦ Менестрель не крадёт очки Похода: у города ${victim.name} их нет.`);
+      if (!actor.hand.length && next.current === actor.id) endTurn(next);
+    });
   }
 
   function skipRecruiter() {
@@ -695,9 +730,17 @@ function App() {
         target.city.push(replacement); adjacent.city.push(resident); activate(`меняет жителей сословия «${resident.estate}» с городом ${adjacent.name}.`);
       }
     } else if (card.id === 'minstrel') {
-      const adjacent = next.players.filter((player) => player.id !== targetId).sort((a, b) => b.crusade - a.crusade)[0];
-      const stolen = Math.min(3, adjacent?.crusade || 0);
-      if (adjacent && stolen) { adjacent.crusade -= stolen; target.crusade += stolen; activate(`крадёт ${stolen} очк. Похода у города ${adjacent.name}.`); }
+      const opponents = next.players.filter((player) => player.id !== ownerId);
+      if (owner.bot) {
+        const victim = opponents.sort((a, b) => b.crusade - a.crusade)[0];
+        const stolen = Math.min(3, victim?.crusade || 0);
+        if (victim && stolen) { victim.crusade -= stolen; owner.crusade += stolen; activate(`крадёт ${stolen} очк. Похода у города ${victim.name}.`); }
+        else activate('не крадёт очки Похода: у других городов их нет.');
+      } else if (opponents.length) {
+        next.pendingChoice = { ability: card.id, actorId: ownerId, targetId, cardUid: card.uid };
+        next.phase = 'choice';
+        activate('выбери город, у которого украсть до 3 очков Похода.');
+      } else activate('не находит другого города для кражи.');
     } else if (card.id === 'troubadur') {
       let stolen = 0;
       next.players.forEach((player) => {
@@ -999,7 +1042,8 @@ function App() {
   return <main className={`game-shell ${viewMode === 'wheel' ? 'wheel-mode' : ''}`} style={viewMode === 'wheel' ? { '--wheel-bg': `url(${game.players[wheelPlayer]?.background})` } : undefined}>
     <header><div className="brand"><small className="build-version">#{BUILD_VERSION}</small><div className="header-actions"><button className="log-toggle" title={game.language === 'en' ? 'Toggle history' : 'Показать/скрыть хронику'} aria-label={game.language === 'en' ? 'Toggle history' : 'Показать/скрыть хронику'} onClick={() => setLogOpen((open) => !open)}>Л</button><button className="rules-toggle" title={QUICK_RULES[game.language].title} aria-label={QUICK_RULES[game.language].title} onClick={() => setRulesOpen((open) => !open)}>?</button><button className="view-toggle" title={game.language === 'en' ? 'Toggle city view' : 'Переключить вид городов'} aria-label={game.language === 'en' ? 'Toggle city view' : 'Переключить вид городов'} onClick={() => setViewMode((mode) => mode === 'overview' ? 'wheel' : 'overview')}>{viewMode === 'overview' ? '◉' : '▦'}</button><button className="report-button" title={game.language === 'en' ? 'Report a bug' : 'Сообщить об ошибке'} aria-label={game.language === 'en' ? 'Report a bug' : 'Сообщить об ошибке'} onClick={() => { setBugStatus(''); setBugOpen(true); }}>{game.language === 'en' ? 'B' : 'Б'}</button><div className="crusade-meter"><span>Святая земля</span><strong>{game.crusadeRound <= 3 ? `${Math.min(game.crusadeRound, 3)}/3 · ${game.crusadePool}/${game.crusadeLimit}` : 'захвачена'}</strong>{viewMode === 'wheel' && <small className="wheel-player-meta">{game.players[wheelPlayer]?.name} · {score(game.players[wheelPlayer])} {game.language === 'en' ? 'VP' : 'ПО'}</small>}<i style={{ width: `${game.crusadeRound <= 3 ? (game.crusadePool / game.crusadeLimit) * 100 : 0}%` }} /></div></div></div></header>
     {rulesOpen && <div className="quick-rules-modal" role="dialog" aria-label={QUICK_RULES[game.language].title} onClick={() => setRulesOpen(false)}><section onClick={(event) => event.stopPropagation()}><button className="quick-rules-close" onClick={() => setRulesOpen(false)} aria-label={game.language === 'en' ? 'Close rules' : 'Закрыть правила'}>×</button><h2>{QUICK_RULES[game.language].title}</h2><ul>{QUICK_RULES[game.language].items.map((item) => <li key={item}>{item}</li>)}</ul></section></div>}
-    {game.pendingChoice && <div className="resident-choice"><strong>{game.pendingChoice.ability === 'heretic-alch' ? 'Еретик-алхимик' : game.pendingChoice.ability === 'heretic-science' ? 'Еретик-натуралист' : game.pendingChoice.ability === 'heretic-necro' ? 'Еретик-некромант' : game.pendingChoice.ability === 'inquisitor' ? 'Инквизитор' : game.pendingChoice.ability === 'recruit' ? 'Рекрутёр' : game.pendingChoice.ability === 'hare' ? 'Заяц' : game.pendingChoice.ability === 'possesed' ? 'Одержимый' : game.pendingChoice.ability === 'crossbowman' ? 'Арбалетчик' : 'Шут'} требует выбора</strong><span>{game.pendingChoice.ability === 'heretic-alch' ? 'Нажми на жителя, которого уничтожить.' : game.pendingChoice.ability === 'heretic-science' ? 'Нажми на жителя, которого переместить.' : game.pendingChoice.ability === 'heretic-necro' ? 'Выбери карту из последних пяти карт сброса.' : game.pendingChoice.ability === 'inquisitor' ? 'Нажми на жителя в своём городе для казни.' : game.pendingChoice.ability === 'recruit' ? 'Нажми на мирного жителя, чтобы отправить его в Поход, или пропусти.' : game.pendingChoice.ability === 'hare' ? 'Нажми на жителя, которого обменять.' : game.pendingChoice.ability === 'possesed' ? 'Нажми на жителя, чью способность повторить.' : game.pendingChoice.ability === 'crossbowman' ? 'Нажми на карту Перекрёстка, которую сбросить.' : 'Нажми на любую карту Перекрёстка, чтобы скопировать её свойство.'}</span>{game.pendingChoice.ability === 'recruit' && <button type="button" onClick={skipRecruiter}>Пропустить</button>}</div>}
+    {game.pendingChoice && game.pendingChoice.ability !== 'minstrel' && <div className="resident-choice"><strong>{game.pendingChoice.ability === 'heretic-alch' ? 'Еретик-алхимик' : game.pendingChoice.ability === 'heretic-science' ? 'Еретик-натуралист' : game.pendingChoice.ability === 'heretic-necro' ? 'Еретик-некромант' : game.pendingChoice.ability === 'inquisitor' ? 'Инквизитор' : game.pendingChoice.ability === 'recruit' ? 'Рекрутёр' : game.pendingChoice.ability === 'hare' ? 'Заяц' : game.pendingChoice.ability === 'possesed' ? 'Одержимый' : game.pendingChoice.ability === 'crossbowman' ? 'Арбалетчик' : 'Шут'} требует выбора</strong><span>{game.pendingChoice.ability === 'heretic-alch' ? 'Нажми на жителя, которого уничтожить.' : game.pendingChoice.ability === 'heretic-science' ? 'Нажми на жителя, которого переместить.' : game.pendingChoice.ability === 'heretic-necro' ? 'Выбери карту из последних пяти карт сброса.' : game.pendingChoice.ability === 'inquisitor' ? 'Нажми на жителя в городе для казни.' : game.pendingChoice.ability === 'recruit' ? 'Нажми на мирного жителя, чтобы отправить его в Поход, или пропусти.' : game.pendingChoice.ability === 'hare' ? 'Нажми на жителя, которого обменять.' : game.pendingChoice.ability === 'possesed' ? 'Нажми на жителя, чью способность повторить.' : game.pendingChoice.ability === 'crossbowman' ? 'Нажми на карту Перекрёстка, которую сбросить.' : 'Нажми на любую карту Перекрёстка, чтобы скопировать её свойство.'}</span>{game.pendingChoice.ability === 'recruit' && <button type="button" onClick={skipRecruiter}>Пропустить</button>}</div>}
+    {game.pendingChoice?.ability === 'minstrel' && <MinstrelTargetModal game={game} actorId={game.pendingChoice.actorId} language={game.language} onChoose={chooseMinstrelTarget} />}
     <section className="table"><div className="play-column"><section className={`draw-module ${game.phase === 'draw-deck' ? 'ready' : ''} ${game.phase === 'play' ? 'crossroads-shrunk' : ''}`}><div className="crossroad-cards">{viewMode !== 'wheel' && <Card faceDown directClick onClick={drawDeck} />}{game.crossroads.map((card, index) => <Card card={card} className="crossroad-card" key={card.uid} targetable={canChooseCrossroad(card)} selectable={game.phase === 'draw-crossroads' || canChooseCrossroad(card)} selectLabel={game.language === 'en' ? 'Select' : 'Выбрать'} onSelect={() => game.pendingChoice?.ability === 'jester' ? chooseCrossroad(index) : game.pendingChoice?.ability === 'crossbowman' ? chooseCrossbowmanCrossroad(index) : game.pendingChoice?.ability === 'hare' ? chooseHareCrossroad(index) : drawCrossroads(index)} />)}{game.current === 0 && game.players[0].hand.map((card) => <Card card={card} key={card.uid} selected={selected?.uid === card.uid} selectable={game.phase === 'play' && !game.pendingChoice} selectLabel={game.language === 'en' ? 'Select' : 'Выбрать'} onSelect={() => game.phase === 'play' && !game.pendingChoice && setSelected(card)} />)}</div><p className="hint">{notice || (game.pendingChoice ? 'Выделенные жители на поле кликабельны.' : game.forcedPlay?.playerId === 0 ? `Ведьма заставляет разыграть ещё ${game.forcedPlay.cardIds.length} карты немедленно.` : selected ? `«${selected.title}»: ${selected.effect} Нажми на город — мгновенный эффект будет отмечен в Хронике.` : 'Твои карты появятся здесь.')}</p></section>{viewMode === 'wheel' ? <CityWheel players={game.players} currentId={game.current} wheelPlayer={wheelPlayer} setWheelPlayer={setWheelPlayer} hand={game.players[0].hand} canSelectHand={game.current === 0 && game.phase === 'play' && !game.pendingChoice} onHandSelect={(card) => game.current === 0 && game.phase === 'play' && !game.pendingChoice && setSelected(card)} cityProps={{ language: game.language, selectedCard: selected, onPlace: () => place(wheelPlayer), infections: game.infections, plaguePreview, setPlaguePreview, residentTarget: (resident) => canChooseResident(wheelPlayer, resident), onResidentTarget: chooseResident }} /> : <section className={`cities players-${Math.min(game.players.length, 4)}`} style={{ '--player-count': game.players.length }}>{game.players.map((player) => <City key={player.id} player={player} language={game.language} active={player.id === game.current} selectedCard={selected} onPlace={() => place(player.id)} infections={game.infections} plaguePreview={plaguePreview} setPlaguePreview={setPlaguePreview} residentTarget={(resident) => canChooseResident(player.id, resident)} onResidentTarget={chooseResident} />)}</section>}</div></section>
     {game.pendingChoice?.ability === 'heretic-necro' && <NecromancerModal cards={game.discard.slice(-5).filter((card) => game.pendingChoice.cardIds.includes(card.uid))} language={game.language} onChoose={chooseNecromancer} />}
     {destinationOpen && selected && <PlayDestinationModal game={game} card={selected} language={game.language} onOwnCity={() => place(game.current)} onOtherCity={(targetId) => place(targetId)} onClose={() => { setDestinationOpen(false); setSelected(null); }} />}
