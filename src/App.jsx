@@ -698,8 +698,15 @@ function App() {
       const stolen = Math.min(3, adjacent?.crusade || 0);
       if (adjacent && stolen) { adjacent.crusade -= stolen; target.crusade += stolen; activate(`крадёт ${stolen} очк. Похода у города ${adjacent.name}.`); }
     } else if (card.id === 'troubadur') {
-      const stolen = next.players.filter((player) => player.id !== targetId).reduce((total, player) => { const amount = Math.min(1, player.crusade); player.crusade -= amount; return total + amount; }, 0);
-      target.crusade += stolen; activate(`крадёт по 1 очку Похода у соседних городов (${stolen} всего).`);
+      let stolen = 0;
+      next.players.forEach((player) => {
+        if (player.id === targetId || player.crusade <= 0) return;
+        player.crusade -= 1;
+        target.crusade += 1;
+        stolen += 1;
+      });
+      if (stolen) activate(`крадёт по 1 очку Похода у каждого города с очками (${stolen} всего).`);
+      else activate('не крадёт очки Похода: у других городов их нет.');
     } else if (card.id === 'harlot') {
       const victim = target.city.find((resident) => resident.uid !== card.uid && WOMEN.has(resident.id));
       if (victim) discardResident(next, target, victim, '✦ Распутная девка сбрасывает женщину');
