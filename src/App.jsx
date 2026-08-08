@@ -972,14 +972,14 @@ function App() {
   function play(next, ownerId, card, targetId) {
     const owner = next.players[ownerId];
     const target = next.players[targetId];
-    if (card.id === 'bandit' && targetId !== ownerId) return;
-    if (next.forcedPlay?.playerId === ownerId && !next.forcedPlay.cardIds.includes(card.uid)) return;
+    if (card.id === 'bandit' && targetId !== ownerId) return false;
+    if (next.forcedPlay?.playerId === ownerId && !next.forcedPlay.cardIds.includes(card.uid)) return false;
     const forcedResumeCurrent = next.forcedPlay?.playerId === ownerId ? next.forcedPlay.resumeCurrent : null;
     const handIndex = owner.hand.findIndex((item) => item.uid === card.uid);
-    if (handIndex < 0) return;
+    if (handIndex < 0) return false;
     const needsDiscardForOwnCity = ['lord', 'knight'].includes(card.id) && targetId === ownerId;
     const discardCost = needsDiscardForOwnCity && owner.hand.find((item) => item.uid !== card.uid);
-    if (needsDiscardForOwnCity && !discardCost) return;
+    if (needsDiscardForOwnCity && !discardCost) return false;
     next.playedCards.push({
       turn: next.turn || 1,
       playerId: owner.id,
@@ -1016,6 +1016,7 @@ function App() {
       }
     }
     if (!next.forcedPlay && !next.pendingChoice && !owner.hand.length && next.current === ownerId) endTurn(next);
+    return true;
   }
 
   function episcopWouldAwardRelicToOther(next, botId) {
@@ -1061,6 +1062,19 @@ function App() {
           : card.id === 'bandit' ? bot.id
           : isSecondSelfPlay ? targetLeader.id : card.epidemic ? (leaderWithoutPlague?.id ?? targetLeader.id) : (card.vp < 0 && attackLeader ? targetLeader.id : bot.id);
         play(next, bot.id, card, targetId);
+        // Never leave the game in an unresolvable bot turn if a newly added
+        // placement rule rejects the AI's target. Try the bot's own city,
+        // then discard as a last-resort safety valve with a Chronicle entry.
+        if (next.phase === 'play' && next.current === bot.id && next.players[bot.id].hand.some((item) => item.uid === card.uid)) {
+          const fallbackTarget = bot.id;
+          play(next, bot.id, card, fallbackTarget);
+          if (next.players[bot.id].hand.some((item) => item.uid === card.uid)) {
+            next.players[bot.id].hand = next.players[bot.id].hand.filter((item) => item.uid !== card.uid);
+            next.discard.push(card);
+            next.log.unshift(`${bot.name} не смог разыграть «${card.title}» и сбрасывает карту, чтобы продолжить ход.`);
+            if (!next.players[bot.id].hand.length && next.current === bot.id) endTurn(next);
+          }
+        }
       }
     }), game.gameSpeed === 10 ? 5000 : 2000);
     return () => clearTimeout(timer);
