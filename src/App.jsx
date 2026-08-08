@@ -1058,6 +1058,7 @@ function App() {
         const attackLeader = next.history.length > 4 && targetLeader && residentCount(targetLeader) >= 5;
         const targetId = card.id === 'plague_doc'
           ? (bot.city.some((resident) => resident.id === 'devil') ? bot.id : (leaderWithoutPlague?.id ?? targetLeader.id))
+          : card.id === 'bandit' ? bot.id
           : isSecondSelfPlay ? targetLeader.id : card.epidemic ? (leaderWithoutPlague?.id ?? targetLeader.id) : (card.vp < 0 && attackLeader ? targetLeader.id : bot.id);
         play(next, bot.id, card, targetId);
       }
