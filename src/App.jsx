@@ -157,7 +157,7 @@ function PlayDestinationModal({ game, card, language, onOwnCity, onOtherCity, on
   return createPortal(<div className="destination-modal" role="dialog" aria-label={english ? 'Choose destination' : 'Выбор города'} onClick={onClose}>
     <div className="destination-panel" onClick={(event) => event.stopPropagation()}>
       <h2>{english ? 'Where should this card go?' : 'Куда отправить карту?'}</h2><p className="destination-card-name">«{card.title}»</p>
-      <div className="destination-actions"><button onClick={onOwnCity}>{english ? 'Play in your city' : 'Разыграть в своём городе'}</button><button onClick={() => setShowOthers(true)}>{english ? 'Send to another city' : 'Отправить в другой город'}</button></div>
+      <div className="destination-actions"><button onClick={onOwnCity}>{english ? 'Play in your city' : 'Разыграть в своём городе'}</button>{card.id !== 'bandit' && <button onClick={() => setShowOthers(true)}>{english ? 'Send to another city' : 'Отправить в другой город'}</button>}</div>
       {showOthers && <div className="opponent-list">{others.map((player) => <button className="opponent-choice" key={player.id} onClick={() => onOtherCity(player.id)}><strong>{player.name}</strong><span>{score(player)} {english ? 'VP' : 'ПО'} · {player.city.length} {english ? 'residents' : 'жит.'}</span><small>{english ? 'Nobles / clergy / commoners' : 'Дворяне / священники / простолюдины'}: {composition(player)}</small></button>)}</div>}
       <button className="destination-cancel" onClick={onClose}>{english ? 'Cancel' : 'Отмена'}</button>
     </div>
@@ -301,6 +301,10 @@ function App() {
 
   function place(targetId) {
     if (!selected || game.phase !== 'play' || current.bot) return;
+    if (selected.id === 'bandit' && targetId !== game.current) {
+      say('Разбойника можно поселить только в свой город.');
+      return;
+    }
     if (game.forcedPlay?.playerId === game.current && !game.forcedPlay.cardIds.includes(selected.uid)) {
       say('Сначала разыграй две карты, полученные от Ведьмы.');
       return;
@@ -555,11 +559,7 @@ function App() {
       const standardBearers = pilgrims.filter((card) => card.id === 'standard_bearer');
       const points = pilgrims.every((card) => card.id === 'warhorse') ? 0 : pilgrims.reduce((total, card) => total + card.crusade, 0) + standardBearers.length * Math.max(0, pilgrims.length - 1);
       player.city = player.city.filter((card) => !pilgrims.includes(card));
-      if (pilgrims.some((card) => card.id === 'guard') && player.imprisoned?.length) {
-        player.hand.push(...player.imprisoned);
-        player.imprisoned = [];
-        next.log.unshift(`${player.name} освобождает карты, спрятанные Стражником.`);
-      }
+      pilgrims.filter((card) => card.id === 'guard').forEach(() => revealGuardCard(next, player, 'Стражник отправлен в Поход'));
       pilgrims.forEach((card) => {
         if (card.id === 'deserter') {
           const destination = next.players[(player.id + 1) % next.players.length];
@@ -604,10 +604,10 @@ function App() {
     next.log.unshift(`${reason}: «${resident.title}» отправляется в сброс.`);
   }
 
-  function revealGuardCard(next, player) {
+  function revealGuardCard(next, player, messagePrefix = 'Стражник сброшен') {
     const hidden = player.imprisoned?.shift();
     if (!hidden) return;
-    next.log.unshift(`✦ Стражник сброшен: карта «${hidden.title}» раскрывается и срабатывает.`);
+    next.log.unshift(`✦ ${messagePrefix}: карта «${hidden.title}» раскрывается и срабатывает.`);
     if (hidden.epidemic) {
       const syphilisBoost = hidden.id === 'syphilis' && player.city.some((resident) => ['harlot', 'devka'].includes(resident.id));
       next.infections.push({ card: hidden, host: player.id, origin: player.id, power: syphilisBoost ? 2 : hidden.victims, syphilisBoosted: syphilisBoost });
@@ -649,6 +649,7 @@ function App() {
   function sendResidentOnCrusade(next, player, resident, points = resident.crusade || Math.max(0, resident.vp), recipient = player) {
     if (!resident) return 0;
     player.city = player.city.filter((item) => item.uid !== resident.uid);
+    if (resident.id === 'guard') revealGuardCard(next, player, 'Стражник отправлен в Поход');
     next.discard.push(resident);
     // The resident's full value counts toward the final score, even when it
     // crosses the remaining Holy Land threshold. Only the shared pool floors
@@ -882,6 +883,7 @@ function App() {
   function play(next, ownerId, card, targetId) {
     const owner = next.players[ownerId];
     const target = next.players[targetId];
+    if (card.id === 'bandit' && targetId !== ownerId) return;
     if (next.forcedPlay?.playerId === ownerId && !next.forcedPlay.cardIds.includes(card.uid)) return;
     const forcedResumeCurrent = next.forcedPlay?.playerId === ownerId ? next.forcedPlay.resumeCurrent : null;
     const handIndex = owner.hand.findIndex((item) => item.uid === card.uid);
