@@ -230,10 +230,7 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .crusade-meter { flex: 0 0 155px; }
 .play-column { display: grid; grid-template-columns: 1fr; gap: 16px; }
 .draw-module {
-  display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 1fr);
-  gap: 16px;
-  align-items: start;
+  display: block;
   padding: 0;
 }
 .draw-module .crossroad-cards {
@@ -242,47 +239,20 @@ header { display: flex; align-items: center; justify-content: space-between; gap
   justify-content: flex-start;
   align-items: center;
   gap: clamp(6px, 1.2vw, 14px);
-  overflow: hidden;
+  overflow-x: auto;
+  padding-bottom: 8px;
 }
 .draw-module .crossroad-cards > .card {
   flex: 0 0 clamp(76px, 8vw, 108px);
   width: clamp(76px, 8vw, 108px);
 }
-.draw-module .hand-panel {
-  grid-column: 2;
-  grid-row: 1;
-  min-width: 0;
-  position: static;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-}
-.hand-panel .section-title { margin: 0 0 4px; }
-.hand-panel .hand {
-  justify-content: flex-start;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  padding: 0 0 8px;
-  gap: 6px;
-}
-.hand-panel .hand .card {
-  flex: 0 0 clamp(58px, 6vw, 82px);
-  width: clamp(58px, 6vw, 82px);
-}
-.hand-panel .hint { min-height: 0; margin: 2px 0 0; padding-top: 6px; font-size: 13px; }
+.draw-module .hint { min-height: 0; margin: 2px 0 0; padding-top: 6px; font-size: 13px; }
 .cities { margin-top: 0; }
 
 @media (max-width: 980px) {
-  .draw-module { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  .draw-module .hand-panel { grid-column: 2; grid-row: 1; }
-  .draw-module .crossroad-cards,
-  .draw-module .hand-panel .hand { overflow-x: auto; }
   .draw-module .crossroad-cards > .card { flex-basis: 88px; width: 88px; }
 }
 
 @media (max-width: 620px) {
-  .draw-module { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
   .draw-module .crossroad-cards > .card { flex-basis: 68px; width: 68px; }
-  .draw-module .hand-panel .hand .card { flex-basis: 58px; width: 58px; }
 }
