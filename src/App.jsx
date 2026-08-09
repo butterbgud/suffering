@@ -860,7 +860,13 @@ function App() {
       if (drawn) { target.city.push(drawn); activate(`кладёт «${drawn.title}» в город без мгновенного свойства.`); }
     } else if (card.id === 'guard') {
       const imprisoned = next.deck.shift();
-      if (imprisoned) { target.imprisoned = [...(target.imprisoned || []), imprisoned]; activate(`прячет верхнюю карту колоды под Стражником.`); }
+      if (imprisoned?.epidemic) {
+        next.discard.push(imprisoned);
+        activate(`вытягивает «${imprisoned.title}», но эпидемия отправляется в сброс.`);
+      } else if (imprisoned) {
+        target.imprisoned = [...(target.imprisoned || []), imprisoned];
+        activate('прячет верхнюю карту колоды под Стражником.');
+      }
     } else if (card.id === 'cupbearer') {
       const noble = target.city.find((resident) => resident.estate === 'дворяне' && resident.uid !== card.uid);
       const adjacent = adjacentPlayers(next, targetId).find((player) => player.city.some((resident) => resident.estate === 'простолюдины'));
