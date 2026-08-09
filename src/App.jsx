@@ -85,7 +85,7 @@ function tieBreakReason(players, winner, english) {
   return english ? 'All tie-breakers were equal.' : 'Все показатели тай-брейка равны.';
 }
 
-const WOMEN = new Set(['lady', 'harlot', 'devka', 'witch']);
+const WOMEN = new Set(['lady', 'harlot', 'devka', 'witch', 'merchant']);
 const epidemicPriority = (card, infection) => card.id === 'syphilis'
   ? (infection?.syphilisBoosted ? 'усиленная эпидемия' : 'обычная эпидемия')
   : ({ cholera: 'сначала простолюдины', leprosy: 'сначала священники', malaria: 'сначала дворяне', black_pox: 'сначала высокий иммунитет', bubonic_plague: 'по 2 жертвы в первый ход' }[card.id] || 'обычный порядок');
