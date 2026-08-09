@@ -1042,6 +1042,10 @@ function App() {
     if (!game || !current?.bot || game.ended) return undefined;
     const timer = setTimeout(() => update((next) => {
       const bot = next.players[next.current];
+      if (!bot?.hand.length && next.phase === 'play' && !next.pendingChoice && !next.forcedPlay) {
+        endTurn(next);
+        return;
+      }
       if (next.phase === 'draw-deck') {
         const card = next.deck.shift(); if (!card) return finish(next);
         bot.hand.forEach((item) => { item.drawnFromDeck = false; });
@@ -1063,6 +1067,10 @@ function App() {
         const safeCard = avoidEpiscop ? bot.hand.find((item) => item.id !== 'episcop') : bot.hand[0];
         const scoringCard = bot.hand.find((item) => item.id !== 'episcop' && !item.epidemic && item.vp >= 0);
         const card = forcedCard || powerfulSelfCard || scoringCard || safeCard || bot.hand[0];
+        if (!card) {
+          endTurn(next);
+          return;
+        }
         const highestScoringOpponent = [...next.players].filter((player) => player.id !== bot.id).sort((a, b) => score(b) - score(a))[0];
         const victoryLeader = [...next.players].sort((a, b) => score(b) - score(a))[0];
         const targetLeader = victoryLeader.id === bot.id ? highestScoringOpponent : victoryLeader;
@@ -1091,6 +1099,14 @@ function App() {
     }), game.gameSpeed === 10 ? 5000 : 2000);
     return () => clearTimeout(timer);
   }, [game, current?.bot, current?.id]);
+
+  useEffect(() => {
+    if (!game || game.ended || current?.bot || game.phase !== 'play' || game.pendingChoice || game.forcedPlay || current.hand.length) return undefined;
+    update((next) => {
+      if (next.phase === 'play' && !next.pendingChoice && !next.forcedPlay && !next.players[next.current]?.hand.length) endTurn(next);
+    });
+    return undefined;
+  }, [game, current?.bot, current?.id, current?.hand.length, game?.phase, game?.pendingChoice, game?.forcedPlay]);
 
   useEffect(() => {
     if (!game || current?.bot || game.ended || game.phase !== 'draw-deck') return undefined;
