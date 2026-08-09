@@ -763,7 +763,7 @@ function App() {
       const available = target.city.filter((item) => item.uid !== card.uid && item.id !== 'corpse')
         .map((resident) => ({ resident, adjacent: adjacentPlayers(next, targetId).find((player) => player.city.some((item) => item.estate === resident.estate)) }))
         .find((entry) => entry.adjacent);
-      if (owner.bot || target.bot) {
+      if (owner.bot) {
         const resident = available?.resident;
         const adjacent = available?.adjacent;
         const replacement = adjacent?.city.find((item) => item.estate === resident?.estate);
@@ -774,7 +774,7 @@ function App() {
           target.city.push(replacement); adjacent.city.push(resident); activate(`меняет жителей сословия «${resident.estate}» с городом ${adjacent.name}.`);
         } else activate('не находит подходящую пару жителей одного сословия для обмена.');
       } else if (available) {
-        next.pendingChoice = { ability: card.id, actorId: targetId, targetId, cardUid: card.uid };
+        next.pendingChoice = { ability: card.id, actorId: ownerId, targetId, cardUid: card.uid };
         next.phase = 'choice';
         activate('выбери жителя этого города для обмена, затем жителя того же сословия в соседнем городе.');
       } else activate('не находит соседний город с жителем того же сословия для обмена.');
