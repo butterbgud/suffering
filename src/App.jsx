@@ -763,7 +763,7 @@ function App() {
       const available = target.city.filter((item) => item.uid !== card.uid && item.id !== 'corpse')
         .map((resident) => ({ resident, adjacent: adjacentPlayers(next, targetId).find((player) => player.city.some((item) => item.estate === resident.estate)) }))
         .find((entry) => entry.adjacent);
-      if (owner.bot) {
+      if (target.bot) {
         const resident = available?.resident;
         const adjacent = available?.adjacent;
         const replacement = adjacent?.city.find((item) => item.estate === resident?.estate);
@@ -774,7 +774,7 @@ function App() {
           target.city.push(replacement); adjacent.city.push(resident); activate(`меняет жителей сословия «${resident.estate}» с городом ${adjacent.name}.`);
         } else activate('не находит подходящую пару жителей одного сословия для обмена.');
       } else if (available) {
-        next.pendingChoice = { ability: card.id, actorId: ownerId, targetId, cardUid: card.uid };
+        next.pendingChoice = { ability: card.id, actorId: targetId, targetId, cardUid: card.uid };
         next.phase = 'choice';
         activate('выбери жителя этого города для обмена, затем жителя того же сословия в соседнем городе.');
       } else activate('не находит соседний город с жителем того же сословия для обмена.');
@@ -819,17 +819,27 @@ function App() {
       });
     } else if (card.id === 'recruit') {
       const recruits = target.city.filter((resident) => resident.uid !== card.uid && resident.crusade <= 0 && resident.id !== 'corpse');
-      if (owner.bot) {
+      if (target.bot) {
         const roundBefore = next.crusadeRound;
         let sent = 0;
-        for (const resident of recruits.slice(0, 2)) {
+        const ordered = [...recruits].sort((a, b) => {
+          const aPoints = Math.max(0, a.vp);
+          const bPoints = Math.max(0, b.vp);
+          const aWinsRelic = aPoints >= next.crusadePool && next.players.every((player) => player.id === targetId || target.crusade + aPoints >= player.crusade);
+          const bWinsRelic = bPoints >= next.crusadePool && next.players.every((player) => player.id === targetId || target.crusade + bPoints >= player.crusade);
+          if (aWinsRelic !== bWinsRelic) return aWinsRelic ? -1 : 1;
+          if (aWinsRelic && bWinsRelic && aPoints !== bPoints) return bPoints - aPoints;
+          if (a.vp < 0 || b.vp < 0) return a.vp - b.vp;
+          return bPoints - aPoints;
+        });
+        for (const resident of ordered.slice(0, 2)) {
           sent += sendResidentOnCrusade(next, target, resident, Math.max(0, resident.vp));
           if (next.crusadeRound !== roundBefore) break;
         }
         if (sent) activate(`отправляет мирных жителей в Поход за ${sent} очк.`);
         if (next.crusadeRound !== roundBefore) activate('Святая Земля достигла лимита — распределена Реликвия.');
       } else if (recruits.length) {
-        next.pendingChoice = { ability: card.id, actorId: ownerId, targetId, cardUid: card.uid, recruitIds: recruits.slice(0, 2).map((resident) => resident.uid) };
+        next.pendingChoice = { ability: card.id, actorId: targetId, targetId, cardUid: card.uid, recruitIds: recruits.slice(0, 2).map((resident) => resident.uid) };
         next.phase = 'choice';
         activate('выбери до двух мирных жителей для Похода или остановись в любой момент.');
       }
