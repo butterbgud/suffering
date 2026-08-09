@@ -324,6 +324,7 @@ function App() {
     if (game.phase !== 'draw-crossroads' || current.bot) return;
     update((next) => {
       const card = next.crossroads.splice(index, 1)[0];
+      if (!card) return;
       next.players[next.current].hand.push(card);
       refillCrossroads(next);
       next.phase = 'play';
@@ -490,8 +491,8 @@ function App() {
 
   function canChooseCrossroad(card) {
     const choice = game?.pendingChoice;
-    return ['jester', 'crossbowman'].includes(choice?.ability) && !card.epidemic
-      || choice?.ability === 'hare' && Boolean(choice.residentUid) && !card.epidemic;
+    return Boolean(card) && (['jester', 'crossbowman'].includes(choice?.ability) && !card.epidemic
+      || choice?.ability === 'hare' && Boolean(choice.residentUid) && !card.epidemic);
   }
 
   function chooseCrossroad(index) {
@@ -972,6 +973,7 @@ function App() {
   function play(next, ownerId, card, targetId) {
     const owner = next.players[ownerId];
     const target = next.players[targetId];
+    if (!owner || !target || !card) return false;
     if (card.id === 'bandit' && targetId !== ownerId) return false;
     if (next.forcedPlay?.playerId === ownerId && !next.forcedPlay.cardIds.includes(card.uid)) return false;
     const forcedResumeCurrent = next.forcedPlay?.playerId === ownerId ? next.forcedPlay.resumeCurrent : null;
