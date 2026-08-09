@@ -238,7 +238,8 @@ function ScoreChart({ history, players }) {
 }
 
 function App() {
-  const [botCount, setBotCount] = useState(3);
+  const [botCount, setBotCountState] = useState(3);
+  const setBotCount = (count) => setBotCountState(Math.max(2, count));
   const [language, setLanguage] = useState('ru');
   const [gameSpeed, setGameSpeed] = useState(5);
   const [viewMode, setViewMode] = useState('overview');
