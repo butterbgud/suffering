@@ -390,6 +390,7 @@ function App() {
     if (choice.ability === 'fanatic') return playerId !== choice.targetId
       && resident.estate === 'простолюдины' && resident.crusade > 0
       && adjacentPlayers(game, choice.targetId).some((player) => player.id === playerId);
+    if (choice.ability === 'hare') return playerId === choice.targetId;
     if (playerId !== choice.targetId) return false;
     if (choice.ability === 'recruit') return choice.recruitIds.includes(resident.uid) && resident.crusade <= 0;
     return true;
@@ -929,10 +930,10 @@ function App() {
       const resident = target.city.find((item) => item.uid !== card.uid);
       const replacement = next.crossroads[0];
       if (resident && replacement) {
-        if (owner.bot && target.bot) {
+        if (owner.bot) {
           target.city = target.city.filter((item) => item.uid !== resident.uid); next.crossroads[0] = resident; target.city.push(replacement); activate(`меняет «${resident.title}» на «${replacement.title}» с Перекрёстка.`);
         } else {
-          next.pendingChoice = { ability: card.id, actorId: ownerId, targetId, cardUid: card.uid };
+          next.pendingChoice = { ability: card.id, actorId: ownerId, chooserId: ownerId, targetId, cardUid: card.uid };
           next.phase = 'choice';
           activate('выбери жителя для обмена с первой картой Перекрёстка.');
         }
