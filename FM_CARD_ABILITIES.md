@@ -4,6 +4,8 @@ This is the expansion catalogue and implementation checklist. It is intentionall
 
 `Copies` is the current temporary deck count. Replace it when the physical card count is confirmed. `Status` tracks implementation: `catalogued` means the card is represented in the deck, while `TODO` means its rules still need engine work.
 
+The first half of `FM.md` is the authoritative rules section. The later repeated sections are retained as supplementary notes until they are consolidated.
+
 ## Additional original cards in this expansion
 
 Feasts and Monsters adds these extra copies to the original catalogue. The Original mode does not include them.
@@ -24,16 +26,16 @@ Feasts and Monsters adds these extra copies to the original catalogue. The Origi
 | demon_party | demon_party.webp | Демон Кутежа | 1 | - | 0 | - | +1 VP per negative resident and per Fiend in this city; counts itself as Fiend. | catalogued / TODO |
 | duchess | duchess.webp | Графиня | 2 | 9 | 4 | - | Lures a male commoner from an adjacent city and makes him a courtier. | catalogued / TODO |
 | lady_virgin | lady_virgin.webp | Девственница | 3 | 12 | 2 | - | Activates one resident’s instant ability in this city; cannot become Fiend. | catalogued / TODO |
-| leprechaun | leprechaun.webp | Лепрекон | 1 | - | 4 | - | Gives 2 points and forces a discard. | catalogued / TODO |
-| leshiy | leshiy.webp | Леший | 1 | - | 0 | - | Moves a Crossroads resident to an adjacent city; that resident’s instant ability does not activate. | catalogued / TODO |
+| leprechaun | leprechaun.webp | Лепрекон | 3 | - | 4 | - | Gives 2 points and forces a discard. | catalogued / TODO |
+| leshiy | leshiy.webp | Леший | 2 | - | 0 | - | Moves a Crossroads resident to an adjacent city; that resident’s instant ability does not activate. | catalogued / TODO |
 | mermaid | mermaid.webp | Утопленница | 1 | - | 0 | - | Cannot be killed, only burned. Moves right with one chosen resident. | catalogued / TODO |
 | nunn | nunn.webp | Монахиня | 3 | 63 | 1 | 2 | Drives one Fiend away. | catalogued / TODO |
-| succub | succub.webp | Суккуб | 1 | - | 4 | - | Searches until the first man or Monster, puts it in this city, then kills a man here. | catalogued / TODO |
-| troll | troll.webp | Тролль | 1 | - | 0 | - | Attacks residents moving across its chosen city boundary; on 4–6 they are discarded. | catalogued / TODO |
+| succub | succub.webp | Суккуб | 2 | - | 4 | - | Searches until the first man or Monster, puts it in this city, then kills a man here. | catalogued / TODO |
+| troll | troll.webp | Тролль | 2 | - | 0 | - | Attacks residents moving across its chosen city boundary; on 4–6 they are discarded. | catalogued / TODO |
 | unicorn | unicorn.webp | Единорог | 1 | - | 4 | - | Moves any resident to an adjacent city and activates its ability. | catalogued / TODO |
-| vurdalak2 | vurdalak2.webp | Вурдалак | 1 | - | 0 | - | Replaces a peaceful man; then moves toward a city containing Baby, Virgin, Nunn, or Lady. | catalogued / TODO |
-| werewolf | werewolf.webp | Оборотень | 1 | - | -3 | - | Places on a peaceful resident. At each Festival, swaps top/bottom with its host. | catalogued / TODO |
-| ghost | ghost.webp | Призрак | 1 | - | 0 | - | Places under a peaceful resident. The host becomes Fiend; only All Saints can kill it. | catalogued / TODO |
+| vurdalak2 | vurdalak2.webp | Вурдалак | 3 | - | 0 | - | Replaces a peaceful man; then moves toward a city containing Baby, Virgin, Nunn, or Lady. | catalogued / TODO |
+| werewolf | werewolf.webp | Оборотень | 3 | - | -3 | - | Places on a peaceful resident. At each Festival, swaps top/bottom with its host. | catalogued / TODO |
+| ghost | ghost.webp | Призрак | 3 | - | 0 | - | Places under a peaceful resident. The host becomes Fiend; only All Saints can kill it. | catalogued / TODO |
 | hare | hare.webp | Заяц на Лужайке | 1 | - | 0 | - | Targets residents with 0 VP first, then the highest-VP resident. | catalogued / TODO |
 
 ## Monsters
@@ -58,6 +60,7 @@ Feasts and Monsters adds these extra copies to the original catalogue. The Origi
 | fish | fish.webp | Четверг | 1 | Reveal one card per player; each player takes and plays one. | catalogued / TODO |
 | shabash | shabash.webp | Шабаш | 1 | Succubi, Witches, and Possessed gather in the current player’s city; Trolls ignore them. | catalogued / TODO |
 | Cursed Mirror | Cursed Mirror.webp | Проклятое зеркало | 1 | A resident activates a Crossroads character as if it belonged to that resident. Ghosts and Vurdalaks are excluded. | catalogued / TODO |
+| all_saints_day | — | День всех Святых | 1 | All Ghosts die; this is the only effect that can kill a Ghost. | rules confirmed / asset TODO |
 
 ## Cursed relics
 
@@ -69,8 +72,9 @@ Feasts and Monsters adds these extra copies to the original catalogue. The Origi
 
 ## Rules checklist
 
+- [x] Authoritative combat rule: use the first half of `FM.md` — Crusader rolls 2 dice, adds both to CP; higher than Danger wins, equal sends both onward, lower kills the Crusader and sends the Monster onward.
 - [ ] Fiend type: counts as resident, has no estate, cannot Crusade; exceptions are Ghost and Mermaid.
-- [ ] Ghost possession and All Saints removal.
+- [x] Ghost removal: Ghosts die only from the All Saints Day event.
 - [ ] Werewolf possession and Festival swapping.
 - [ ] Monster lairs, hunger growth, movement, and one-combat-per-turn limit.
 - [ ] Crusader-versus-Monster combat and monster priority lists.
