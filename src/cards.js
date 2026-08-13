@@ -105,9 +105,11 @@ export const FEASTS_LIBRARY = [
   fmRelic('excalibur', 'Меч в камне', 4, 'В конце игры брось кубик за каждого простолюдина; первый результат 6 становится дворянином.'),
 ];
 
-export function buildDeck({ removeEpidemics = false, includeFeasts = false } = {}) {
+export function buildDeck({ removeEpidemics = false, includeFeasts = false, excludeIds = [] } = {}) {
+  const excluded = new Set(excludeIds);
   const library = includeFeasts ? [...CARD_LIBRARY.filter((card) => !removeEpidemics || !card.epidemic), ...FEASTS_LIBRARY] : CARD_LIBRARY;
-  return library.flatMap((card) => Array.from({ length: CARD_COUNTS[card.id] ?? 0 }, (_, index) => ({ ...card, uid: `${card.id}-${index}-${Math.random().toString(36).slice(2)}` })));
+  return library.filter((card) => !excluded.has(card.id))
+    .flatMap((card) => Array.from({ length: CARD_COUNTS[card.id] ?? 0 }, (_, index) => ({ ...card, uid: `${card.id}-${index}-${Math.random().toString(36).slice(2)}` })));
 }
 
 export function shuffle(cards) {

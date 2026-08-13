@@ -13,7 +13,7 @@ const RELIC_VP = 6;
 const RELIC_CARDS = ['hg1', 'hg2', 'hg3'];
 const GAME_MODES = {
   original: { ru: 'Оригинал', en: 'Original', description: { ru: 'Базовая игра с Эпидемиями.', en: 'The base game with Epidemics.' }, removeEpidemics: false },
-  feasts: { ru: 'Пиры и чудовища', en: 'Feasts and Monsters', description: { ru: 'Эпидемии убраны по рекомендации FM.md; карты нечисти и чудовищ подключаются отдельным пакетом.', en: 'Epidemics are removed per FM.md; Fiend and Monster cards plug in as a separate package.' }, removeEpidemics: true, includeFeasts: true },
+  feasts: { ru: 'Пиры и Черти', en: 'Feasts and Monsters', description: { ru: 'Эпидемии, Чумной доктор и Крестьянин убраны по правилам FM.md.', en: 'Epidemics, the Plague Doctor, and Peasant are removed per FM.md.' }, removeEpidemics: true, includeFeasts: true, excludeIds: ['plague_doc', 'peasant'] },
 };
 const CITY_BACKGROUNDS = Object.entries(import.meta.glob('/public/assets/ui/c*.webp', { eager: true, query: '?url', import: 'default' }))
   .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
