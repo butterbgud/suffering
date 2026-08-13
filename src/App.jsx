@@ -1201,7 +1201,7 @@ function App() {
     const handIndex = owner.hand.findIndex((item) => item.uid === card.uid);
     if (handIndex < 0) return false;
     const needsDiscardForOwnCity = ['lord', 'knight'].includes(card.id) && targetId === ownerId;
-    const discardCost = needsDiscardForOwnCity && owner.hand.find((item) => item.uid !== card.uid);
+    const discardCost = needsDiscardForOwnCity ? owner.hand.find((item) => item.uid !== card.uid) : null;
     if (needsDiscardForOwnCity && !discardCost) return false;
     next.playedCards.push({
       turn: next.turn || 1,
