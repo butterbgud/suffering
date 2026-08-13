@@ -57,6 +57,12 @@ Feasts and Monsters adds these extra copies to the original catalogue. The Origi
 | fair | fair.webp | Ярмарка | 1 | Kolya, Executioner, Minstrel, Jester, and Troubadour activate again. | catalogued / TODO |
 | fish | fish.webp | Четверг | 1 | Reveal one card per player; each player takes and plays one. | catalogued / TODO |
 | shabash | shabash.webp | Шабаш | 1 | Succubi, Witches, and Possessed gather in the current player’s city; Trolls ignore them. | catalogued / TODO |
+| fullmoon | fullmoon.webp | Полнолуние | 1 | Activate lunar properties, then continue the turn. | catalogued / core loop |
+| new_moon | new_moon.webp | Новолуние | 1 | Activate lunar properties, then continue the turn. | catalogued / core loop |
+| st_patrick | st_patrick.webp | День святого Патрика | 1 | Festival event; resident-specific effects remain to be implemented. | catalogued / TODO |
+| st_valentine | st_valentine.webp | День святого Валентина | 1 | Festival event; resident-specific effects remain to be implemented. | catalogued / TODO |
+| tournament | tournament.webp | Турнир | 1 | Festival event that initiates a local Crusade. | catalogued / core loop |
+| all_saints | all_saints.webp | День всех святых | 1 | All Ghosts die; this is the only way to kill a Ghost. | catalogued / core loop |
 
 ## Cursed relics
 

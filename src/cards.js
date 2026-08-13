@@ -99,6 +99,12 @@ export const FEASTS_LIBRARY = [
   fmFestival('fair', 'Ярмарка', 'Коля, Палач, Менестрель, Шут и Трубадур срабатывают ещё раз.'),
   fmFestival('fish', 'Четверг', 'Выложите по карте на игрока; каждый забирает одну и разыгрывает её.'),
   fmFestival('shabash', 'Шабаш', 'Суккубы, Ведьмы и Бесноватая собираются в городе текущего игрока.'),
+  fmFestival('fullmoon', 'Полнолуние', 'Активируются лунные свойства жителей.'),
+  fmFestival('new_moon', 'Новолуние', 'Активируются лунные свойства жителей.'),
+  fmFestival('st_patrick', 'День святого Патрика', 'Особое событие расширения.'),
+  fmFestival('st_valentine', 'День святого Валентина', 'Особое событие расширения.'),
+  fmFestival('tournament', 'Турнир', 'Крестоносцы текущего города получают возможность сразиться.'),
+  fmFestival('all_saints', 'День всех святых', 'Все Призраки погибают.'),
   fmRelic('nercomicon', 'Некрономикон', 3, 'При смерти жителя можно один раз бросить кубик; на 6 он выживает.'),
   fmRelic('sarchopagus', 'Саркофаг', 2, 'Складывает умерших жителей под себя и возвращает одного в руку.'),
   fmRelic('excalibur', 'Меч в камне', 4, 'В конце игры брось кубик за каждого простолюдина; первый результат 6 становится дворянином.'),
@@ -111,7 +117,7 @@ const FEASTS_ADDITIONAL_COPIES = { midget: 1, adaptable: 1, mutilator: 2, baby: 
 export function buildDeck({ removeEpidemics = false, includeFeasts = false, excludeIds = [] } = {}) {
   const excluded = new Set(excludeIds);
   const library = includeFeasts ? [...CARD_LIBRARY.filter((card) => !removeEpidemics || !card.epidemic), ...FEASTS_LIBRARY] : CARD_LIBRARY;
-  return library.filter((card) => !excluded.has(card.id))
+  return library.filter((card) => !excluded.has(card.id) && !card.festival && !card.relic)
     .flatMap((card) => {
       const copies = (CARD_COUNTS[card.id] ?? 0) + (includeFeasts ? (FEASTS_ADDITIONAL_COPIES[card.id] ?? 0) : 0);
       return Array.from({ length: copies }, (_, index) => ({ ...card, uid: `${card.id}-${index}-${Math.random().toString(36).slice(2)}` }));

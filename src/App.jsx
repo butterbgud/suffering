@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { buildDeck, shuffle } from './cards.js';
+import { buildDeck, FEASTS_LIBRARY, shuffle } from './cards.js';
 
 const BUILD_VERSION = __BUILD_VERSION__;
 const QUICK_RULES = {
@@ -22,8 +22,10 @@ const CITY_BACKGROUNDS = Object.entries(import.meta.glob('/public/assets/ui/c*.w
 function freshGame(botCount, language = 'ru', gameSpeed = 5, gameMode = 'original') {
   const mode = GAME_MODES[gameMode] || GAME_MODES.original;
   const deck = shuffle(buildDeck(mode));
+  const expansionRelics = FEASTS_LIBRARY.filter((card) => card.relic);
+  const festivalDeck = mode.includeFeasts ? shuffle(FEASTS_LIBRARY.filter((card) => card.festival)) : [];
   const names = language === 'en' ? ['You', ...Array.from({ length: 5 }, (_, index) => `B${index + 1}`)] : ['Вы', ...Array.from({ length: 5 }, (_, index) => `Б${index + 1}`)];
-  const players = Array.from({ length: botCount + 1 }, (_, id) => ({ id, name: names[id], bot: id > 0, city: [], hand: [], crusade: 0, relics: [] }));
+  const players = Array.from({ length: botCount + 1 }, (_, id) => ({ id, name: names[id], bot: id > 0, city: [], hand: [], crusade: 0, relics: [], lairs: [] }));
   shuffle(CITY_BACKGROUNDS).slice(0, players.length).forEach((background, index) => { players[index].background = background; });
   return {
     deck: deck.slice(3),
@@ -34,7 +36,10 @@ function freshGame(botCount, language = 'ru', gameSpeed = 5, gameMode = 'origina
     phase: 'draw-deck',
     infections: [],
     discard: [],
-    relicDeck: shuffle([...RELIC_CARDS]),
+    relicDeck: shuffle(mode.includeFeasts ? expansionRelics : [...RELIC_CARDS]),
+    festivalDeck,
+    festivalDiscard: [],
+    monsters: [],
     forcedPlay: null,
     pendingChoice: null,
     crusadePool: CRUSADE_POOL[players.length],
@@ -51,7 +56,7 @@ function freshGame(botCount, language = 'ru', gameSpeed = 5, gameMode = 'origina
 }
 
 function score(player) {
-  return residentScore(player) + relicScore(player);
+  return residentScore(player) + relicScore(player) + lairScore(player);
 }
 
 function residentScore(player) {
@@ -68,7 +73,11 @@ function residentScore(player) {
 }
 
 function relicScore(player) {
-  return player.relics.length * RELIC_VP;
+  return player.relics.reduce((total, relic) => total + (relic.vp ?? RELIC_VP), 0);
+}
+
+function lairScore(player) {
+  return (player.lairs || []).reduce((total, lair) => total + (lair.vp || 0), 0);
 }
 
 function residentCount(player) {
@@ -137,7 +146,7 @@ function Card({ card, small = false, onClick, onSelect, selected, targetable = f
   </>;
 }
 
-function City({ player, active, selectedCard, onPlace, infections = [], plaguePreview, setPlaguePreview, residentTarget, onResidentTarget, language = 'ru' }) {
+function City({ player, active, selectedCard, onPlace, infections = [], monsters = player.monsters || [], plaguePreview, setPlaguePreview, residentTarget, onResidentTarget, language = 'ru' }) {
   const estates = ['дворяне', 'священники', 'простолюдины'];
   const english = language === 'en';
   return <section className={`city ${active ? 'active' : ''} ${selectedCard ? 'place-target' : ''}`} onClickCapture={(event) => selectedCard && !event.target.closest('.city-head') && onPlace()}>
@@ -145,6 +154,7 @@ function City({ player, active, selectedCard, onPlace, infections = [], plaguePr
       <span>{player.name} ({score(player)} {english ? 'VP' : 'ПО'} <em className="vp-relic">{relicScore(player)}{english ? 'H' : 'Р'}</em> + <em className="vp-resident">{residentScore(player)}{english ? 'R' : 'Ж'}</em> · {player.crusade} ✠)</span>
     </button>
     {infections.filter((infection) => infection.host === player.id).map((infection) => <div className="infection" key={infection.card.uid} onMouseEnter={() => setPlaguePreview(true)} onMouseLeave={() => setPlaguePreview(false)} onClick={() => setPlaguePreview((open) => !open)} title="Нажмите или наведите для просмотра карты эпидемии"><span>☠</span><strong>{infection.card.title}</strong><em>{infection.power} жертв. · {epidemicPriority(infection.card, infection)}</em>{plaguePreview && <div className="plague-preview"><img src={infection.card.art} alt={infection.card.title} /><b>{infection.card.title}</b><small>{infection.card.effect}</small></div>}</div>)}
+    {monsters.filter((monster) => monster.host === player.id).map((monster) => <div className="monster" key={monster.uid}><span>☠</span><strong>{monster.card.title}</strong><em>опасность {monster.card.danger} · голод {monster.hunger}</em></div>)}
     <div className="lanes">
       {estates.map((estate) => <div className="lane" key={estate}>
         <label>{estate}</label>
@@ -655,8 +665,79 @@ function App() {
     next.infections.filter((infection) => infection.host === next.current).forEach((infection) => resolveEpidemic(next, infection));
   }
 
+  function rollDie() {
+    return 1 + Math.floor(Math.random() * 6);
+  }
+
+  function monsterVictims(monster, city) {
+    const living = city.city.filter((card) => !['corpse', 'ghost', 'mermaid'].includes(card.id));
+    const priority = monster.card.id === 'basilysk'
+      ? (card) => ['cat', 'midget', 'unicorn'].includes(card.id)
+      : monster.card.id === 'dragon'
+        ? (card) => WOMEN.has(card.id) || card.id === 'adaptable'
+        : monster.card.id === 'giant'
+          ? (card) => ['baby', 'midget'].includes(card.id)
+          : monster.card.id === 'manticore'
+            ? (card) => card.crusade > 0 && card.id !== 'warhorse'
+            : () => false;
+    return living.sort((a, b) => Number(priority(b)) - Number(priority(a)) || b.vp - a.vp);
+  }
+
+  function resolveMonsters(next) {
+    if (next.gameMode !== 'feasts' || !next.monsters?.length) return;
+    let fought = false;
+    const remaining = [];
+    next.monsters.forEach((monster) => {
+      const city = next.players[monster.host];
+      if (!city) return;
+      const crusaders = city.city.filter((card) => card.crusade > 0 && card.id !== 'warhorse' && !['ghost', 'mermaid'].includes(card.id));
+      const crusader = crusaders.sort((a, b) => b.crusade - a.crusade || b.vp - a.vp)[0];
+      if (crusader && !fought) {
+        fought = true;
+        const dice = [rollDie(), rollDie()];
+        const total = dice[0] + dice[1] + crusader.crusade;
+        next.log.unshift(`⚔ ${crusader.title} бросает ${dice.join(' + ')} + ${crusader.crusade} против опасности ${monster.card.danger}.`);
+        if (total > monster.card.danger) {
+          city.city = city.city.filter((card) => card.uid !== crusader.uid);
+          next.discard.push(crusader);
+          city.lairs = city.lairs || [];
+          city.lairs.push({ id: monster.uid, title: `Логово: ${monster.card.title}`, vp: monster.card.danger });
+          next.log.unshift(`⚔ ${city.name} уничтожает «${monster.card.title}» и получает жетон логова.`);
+          return;
+        }
+        if (total < monster.card.danger) discardResident(next, city, crusader, `⚔ ${monster.card.title} побеждает крестоносца`);
+      } else {
+        const victims = monsterVictims(monster, city).slice(0, monster.hunger || 1);
+        victims.forEach((victim) => discardResident(next, city, victim, `☠ ${monster.card.title} пожирает жертву`));
+      }
+      const host = (monster.host + 1) % next.players.length;
+      const hunger = host === monster.origin ? (monster.hunger || 1) + 1 : (monster.hunger || 1);
+      remaining.push({ ...monster, host, hunger });
+      next.log.unshift(`☠ ${monster.card.title} переходит в город ${next.players[host].name}.`);
+    });
+    next.monsters = remaining;
+    next.players.forEach((player) => { player.monsters = next.monsters.filter((monster) => monster.host === player.id); });
+  }
+
+  function resolveFestival(next) {
+    if (next.gameMode !== 'feasts' || !next.festivalDeck?.length) return;
+    const festival = next.festivalDeck.shift();
+    next.festivalDiscard.push(festival);
+    next.log.unshift(`🌙 Событие: «${festival.title}».`);
+    if (festival.id === 'all_saints') {
+      next.players.forEach((player) => {
+        player.city.filter((card) => card.id === 'ghost').forEach((ghost) => discardResident(next, player, ghost, '✝ День всех святых'));
+      });
+    } else if (festival.id === 'tournament') {
+      triggerCrusade(next, next.current, true);
+    }
+    if (!next.festivalDeck.length) next.festivalDeck = shuffle(next.festivalDiscard.splice(0));
+  }
+
   function endTurn(next) {
     resolveEpidemics(next);
+    resolveMonsters(next);
+    if (next.gameMode === 'feasts' && (next.turn || 1) >= 2 && rollDie() === 1) resolveFestival(next);
     if (next.players.some((player) => residentCount(player) >= 10)) {
       recordHistory(next, 'конец');
       next.ended = true;
@@ -717,8 +798,9 @@ function App() {
   function resolveCrusadeRound(next) {
     if (next.crusadeRound > 3 || next.crusadePool > 0) return false;
     const winner = [...next.players].sort((a, b) => b.crusade - a.crusade || a.relics.length - b.relics.length || b.city.filter((card) => card.estate === 'священники').length - a.city.filter((card) => card.estate === 'священники').length || score(a) - score(b))[0];
-    winner.relics.push(next.relicDeck.shift() || RELIC_CARDS[(next.crusadeRound - 1) % RELIC_CARDS.length]);
-    next.log.unshift(`${winner.name} получает Реликвию: +${RELIC_VP} ПО в конце игры.`);
+    const relic = next.relicDeck.shift() || RELIC_CARDS[(next.crusadeRound - 1) % RELIC_CARDS.length];
+    winner.relics.push(relic);
+    next.log.unshift(`${winner.name} получает Реликвию: +${relic.vp ?? RELIC_VP} ПО в конце игры.`);
     next.players.forEach((player) => { player.crusade = 0; });
     next.crusadeRound += 1;
     next.crusadePool = next.crusadeRound <= 3 ? next.crusadeLimit : 0;
@@ -726,6 +808,15 @@ function App() {
   }
 
   function discardResident(next, player, resident, reason) {
+    if (resident.id !== 'ghost' && player.relics.some((relic) => relic.id === 'nercomicon') && !player.relicState?.nercomiconUsed) {
+      const roll = rollDie();
+      player.relicState = { ...(player.relicState || {}), nercomiconUsed: true };
+      if (roll === 6) {
+        next.log.unshift(`☠ Некрономикон спасает «${resident.title}» (бросок 6).`);
+        return;
+      }
+      next.log.unshift(`☠ Некрономикон не спасает «${resident.title}» (бросок ${roll}).`);
+    }
     player.city = player.city.filter((item) => item.uid !== resident.uid);
     if (resident.id === 'guard' && player.imprisoned?.length) {
       revealGuardCard(next, player);
@@ -1094,6 +1185,11 @@ function App() {
       next.infections.push({ card, host: targetId, origin: targetId, power: syphilisBoost ? 2 : card.victims, syphilisBoosted: syphilisBoost });
       next.log.unshift(`${owner.name} приносит «${card.title}» в город ${target.name}.`);
       if (syphilisBoost) next.log.unshift('✦ Сифилис начинает с двух жертв: в исходном городе есть Девка или Распутная девка.');
+    } else if (card.monster) {
+      next.monsters = next.monsters || [];
+      next.monsters.push({ card, uid: card.uid, host: targetId, origin: targetId, hunger: card.danger });
+      next.players.forEach((player) => { player.monsters = next.monsters.filter((monster) => monster.host === player.id); });
+      next.log.unshift(`${owner.name} выпускает «${card.title}» в городе ${target.name}.`);
     } else {
       target.city.push(card);
       next.log.unshift(`${owner.name} селит «${card.title}» в городе ${target.name}.`);
