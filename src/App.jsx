@@ -1311,7 +1311,7 @@ function App() {
           }
         }
       }
-    }), (game.gameSpeed || 5) * 1000);
+    }), game.gameMode === 'original' && game.phase !== 'draw-deck' ? 0 : (game.gameSpeed || 5) * 1000);
     return () => clearTimeout(timer);
   }, [game, current?.bot, current?.id]);
 
