@@ -16,5 +16,5 @@ export const CARD_COUNTS = {
   unicorn: 1, vurdalak2: 1, werewolf: 1, ghost: 1, hare: 1,
   basilysk: 1, dragon: 1, giant: 1, manticore: 1, rusal: 1,
   Carnival: 1, Walpurgis: 1, beltain: 1, christmas: 1, fair: 1, fish: 1, shabash: 1,
-  'Cursed Mirror': 1, nercomicon: 1, sarchopagus: 1, excalibur: 1,
+  cursed_mirror: 1, nercomicon: 1, sarchopagus: 1, excalibur: 1,
 };

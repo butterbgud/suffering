@@ -4,8 +4,6 @@ This is the expansion catalogue and implementation checklist. It is intentionall
 
 `Copies` is the current temporary deck count. Replace it when the physical card count is confirmed. `Status` tracks implementation: `catalogued` means the card is represented in the deck, while `TODO` means its rules still need engine work.
 
-The first half of `FM.md` is the authoritative rules section. The later repeated sections are retained as supplementary notes until they are consolidated.
-
 ## Additional original cards in this expansion
 
 Feasts and Monsters adds these extra copies to the original catalogue. The Original mode does not include them.
@@ -59,8 +57,6 @@ Feasts and Monsters adds these extra copies to the original catalogue. The Origi
 | fair | fair.webp | Ярмарка | 1 | Kolya, Executioner, Minstrel, Jester, and Troubadour activate again. | catalogued / TODO |
 | fish | fish.webp | Четверг | 1 | Reveal one card per player; each player takes and plays one. | catalogued / TODO |
 | shabash | shabash.webp | Шабаш | 1 | Succubi, Witches, and Possessed gather in the current player’s city; Trolls ignore them. | catalogued / TODO |
-| Cursed Mirror | Cursed Mirror.webp | Проклятое зеркало | 1 | A resident activates a Crossroads character as if it belonged to that resident. Ghosts and Vurdalaks are excluded. | catalogued / TODO |
-| all_saints_day | — | День всех Святых | 1 | All Ghosts die; this is the only effect that can kill a Ghost. | rules confirmed / asset TODO |
 
 ## Cursed relics
 
@@ -69,12 +65,12 @@ Feasts and Monsters adds these extra copies to the original catalogue. The Origi
 | nercomicon | nercomicon.webp | Некрономикон | 1 | 3 | When a resident dies, one attempt may be made to roll a 6 and save them. | catalogued / TODO |
 | sarchopagus | sarchopagus.webp | Саркофаг | 1 | 2 | Stores dead residents; retrieve one later and play it into your city, ignoring placement restrictions. | catalogued / TODO |
 | excalibur | excalibur.webp | Меч в камне | 1 | 4 | At game end, roll for each commoner; the first 6 promotes that commoner to courtier. | catalogued / TODO |
+| cursed_mirror | Cursed_Mirror.webp | Проклятое зеркало | 1 | 5 | A resident activates a Crossroads character as if it belonged to that resident. Ghosts and Vurdalaks are excluded. | catalogued / TODO |
 
 ## Rules checklist
 
-- [x] Authoritative combat rule: use the first half of `FM.md` — Crusader rolls 2 dice, adds both to CP; higher than Danger wins, equal sends both onward, lower kills the Crusader and sends the Monster onward.
 - [ ] Fiend type: counts as resident, has no estate, cannot Crusade; exceptions are Ghost and Mermaid.
-- [x] Ghost removal: Ghosts die only from the All Saints Day event.
+- [ ] Ghost possession and All Saints removal.
 - [ ] Werewolf possession and Festival swapping.
 - [ ] Monster lairs, hunger growth, movement, and one-combat-per-turn limit.
 - [ ] Crusader-versus-Monster combat and monster priority lists.

@@ -7,7 +7,7 @@ const disease = (id, title, victims, effect = '') => ({ id, title, victims, copi
 const fmResident = (id, title, vp, effect = '', artId = id) => ({ id, title, vp, effect, epidemic: false, expansion: 'feasts', art: `/assets/cards/fm/${artId}.webp` });
 const fmMonster = (id, title, danger, effect = '') => ({ id, title, danger, effect, epidemic: false, monster: true, expansion: 'feasts', art: `/assets/cards/fm/${id}.webp` });
 const fmFestival = (id, title, effect = '') => ({ id, title, effect, epidemic: false, festival: true, expansion: 'feasts', art: `/assets/cards/fm/${id}.webp` });
-const fmRelic = (id, title, vp, effect = '') => ({ id, title, vp, effect, epidemic: false, relic: true, expansion: 'feasts', art: `/assets/cards/fm/${id}.webp` });
+const fmRelic = (id, title, vp, effect = '', artId = id) => ({ id, title, vp, effect, epidemic: false, relic: true, expansion: 'feasts', art: `/assets/cards/fm/${artId}.webp` });
 
 // Every playable face in public/assets/cards. CARD_ABILITIES.md is the rules ledger;
 // CARD_COUNTS is deliberately separate so deck composition is easy to tune.
@@ -99,10 +99,10 @@ export const FEASTS_LIBRARY = [
   fmFestival('fair', 'Ярмарка', 'Коля, Палач, Менестрель, Шут и Трубадур срабатывают ещё раз.'),
   fmFestival('fish', 'Четверг', 'Выложите по карте на игрока; каждый забирает одну и разыгрывает её.'),
   fmFestival('shabash', 'Шабаш', 'Суккубы, Ведьмы и Бесноватая собираются в городе текущего игрока.'),
-  fmFestival('Cursed Mirror', 'Проклятое зеркало', 'Житель города активирует персонажа на Перекрёстке, словно тот принадлежит ему.'),
   fmRelic('nercomicon', 'Некрономикон', 3, 'При смерти жителя можно один раз бросить кубик; на 6 он выживает.'),
   fmRelic('sarchopagus', 'Саркофаг', 2, 'Складывает умерших жителей под себя и возвращает одного в руку.'),
   fmRelic('excalibur', 'Меч в камне', 4, 'В конце игры брось кубик за каждого простолюдина; первый результат 6 становится дворянином.'),
+  fmRelic('cursed_mirror', 'Проклятое зеркало', 5, 'Житель города активирует персонажа на Перекрёстке, словно тот принадлежит ему. Призраки и Вурдалаки исключаются.', 'Cursed_Mirror'),
 ];
 
 // The expansion also adds extra copies of selected original residents.
