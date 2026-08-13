@@ -17,24 +17,24 @@ Feasts and Monsters adds these extra copies to the original catalogue. The Origi
 
 ## Fiends and residents
 
-| ID | Art | Card | Copies | Immunity | VP | Crusade | Ability | Status |
-| --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- |
-| demon_herecy | demon_herecy.webp | Демон Ереси | 1 | - | 0 | - | +1 VP per negative resident and per Inquisitor, Pastor, or Preacher in this city. | catalogued / TODO |
-| demon_lust | demon_lust.webp | Демон Похоти | 1 | - | 0 | - | +1 VP per negative resident, woman, Succubus, and Adaptable in this city. | catalogued / TODO |
-| demon_party | demon_party.webp | Демон Кутежа | 1 | - | 0 | - | +1 VP per negative resident and per Fiend in this city; counts itself as Fiend. | catalogued / TODO |
-| duchess | duchess.webp | Графиня | 2 | 9 | 4 | - | Lures a male commoner from an adjacent city and makes him a courtier. | catalogued / TODO |
-| lady_virgin | lady_virgin.webp | Девственница | 3 | 12 | 2 | - | Activates one resident’s instant ability in this city; cannot become Fiend. | catalogued / TODO |
-| leprechaun | leprechaun.webp | Лепрекон | 3 | - | 4 | - | Gives 2 points and forces a discard. | catalogued / TODO |
-| leshiy | leshiy.webp | Леший | 2 | - | 0 | - | Moves a Crossroads resident to an adjacent city; that resident’s instant ability does not activate. | catalogued / TODO |
-| mermaid | mermaid.webp | Утопленница | 1 | - | 0 | - | Cannot be killed, only burned. Moves right with one chosen resident. | catalogued / TODO |
-| nunn | nunn.webp | Монахиня | 3 | 63 | 1 | 2 | Drives one Fiend away. | catalogued / TODO |
-| succub | succub.webp | Суккуб | 2 | - | 4 | - | Searches until the first man or Monster, puts it in this city, then kills a man here. | catalogued / TODO |
-| troll | troll.webp | Тролль | 2 | - | 0 | - | Attacks residents moving across its chosen city boundary; on 4–6 they are discarded. | catalogued / TODO |
-| unicorn | unicorn.webp | Единорог | 1 | - | 4 | - | Moves any resident to an adjacent city and activates its ability. | catalogued / TODO |
-| vurdalak2 | vurdalak2.webp | Вурдалак | 3 | - | 0 | - | Replaces a peaceful man; then moves toward a city containing Baby, Virgin, Nunn, or Lady. | catalogued / TODO |
-| werewolf | werewolf.webp | Оборотень | 3 | - | -3 | - | Places on a peaceful resident. At each Festival, swaps top/bottom with its host. | catalogued / TODO |
-| ghost | ghost.webp | Призрак | 3 | - | 0 | - | Places under a peaceful resident. The host becomes Fiend; only All Saints can kill it. | catalogued / TODO |
-| hare | hare.webp | Заяц на Лужайке | 1 | - | 0 | - | Targets residents with 0 VP first, then the highest-VP resident. | catalogued / TODO |
+| ID | Art | Card | Copies | Immunity | VP | Crusade | Type | Ability | Status |
+| --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- |
+| demon_herecy | demon_herecy.webp | Демон Ереси | 1 | - | 0 | - | Нечисть | +1 VP per negative resident and per Inquisitor, Pastor, or Preacher in this city. | catalogued / TODO |
+| demon_lust | demon_lust.webp | Демон Похоти | 1 | - | 0 | - | Нечисть | +1 VP per negative resident, woman, Succubus, and Adaptable in this city. | catalogued / TODO |
+| demon_party | demon_party.webp | Демон Кутежа | 1 | - | 0 | - | Нечисть | +1 VP per negative resident and per Fiend in this city; counts itself as Fiend. | catalogued / TODO |
+| duchess | duchess.webp | Графиня | 2 | 9 | 4 | - | - | Lures a male commoner from an adjacent city and makes him a courtier. | catalogued / TODO |
+| lady_virgin | lady_virgin.webp | Девственница | 3 | 12 | 2 | - | - | Activates one resident’s instant ability in this city; cannot become Fiend. | catalogued / TODO |
+| leprechaun | leprechaun.webp | Лепрекон | 3 | - | 4 | - | Нечисть | Gives 2 points and forces a discard. | catalogued / TODO |
+| leshiy | leshiy.webp | Леший | 2 | - | 0 | - | Нечисть | Moves a Crossroads resident to an adjacent city; that resident’s instant ability does not activate. | catalogued / TODO |
+| mermaid | mermaid.webp | Утопленница | 1 | - | 0 | - | Нечисть | Cannot be killed, only burned. Moves right with one chosen resident. | catalogued / TODO |
+| nunn | nunn.webp | Монахиня | 3 | 63 | 1 | 2 | - | Drives one Fiend away. | catalogued / TODO |
+| succub | succub.webp | Суккуб | 2 | - | 4 | - | Нечисть | Searches until the first man or Monster, puts it in this city, then kills a man here. | catalogued / TODO |
+| troll | troll.webp | Тролль | 2 | - | 0 | - | Нечисть | Attacks residents moving across its chosen city boundary; on 4–6 they are discarded. | catalogued / TODO |
+| unicorn | unicorn.webp | Единорог | 1 | - | 4 | - | - | Moves any resident to an adjacent city and activates its ability. | catalogued / TODO |
+| vurdalak2 | vurdalak2.webp | Вурдалак | 3 | - | 0 | - | Нечисть | Replaces a peaceful man; then moves toward a city containing Baby, Virgin, Nunn, or Lady. | catalogued / TODO |
+| werewolf | werewolf.webp | Оборотень | 3 | - | -3 | - | Нечисть | Places on a peaceful resident. At each Festival, swaps top/bottom with its host. | catalogued / TODO |
+| ghost | ghost.webp | Призрак | 3 | - | 0 | - | Нечисть | Places under a peaceful resident. The host becomes Fiend; only All Saints can kill it. | catalogued / TODO |
+| hare | hare.webp | Заяц на Лужайке | 1 | - | 0 | - | - | Targets residents with 0 VP first, then the highest-VP resident. | catalogued / TODO |
 
 ## Monsters
 
