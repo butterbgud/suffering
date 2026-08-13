@@ -4,6 +4,17 @@ This is the expansion catalogue and implementation checklist. It is intentionall
 
 `Copies` is the current temporary deck count. Replace it when the physical card count is confirmed. `Status` tracks implementation: `catalogued` means the card is represented in the deck, while `TODO` means its rules still need engine work.
 
+## Additional original cards in this expansion
+
+Feasts and Monsters adds these extra copies to the original catalogue. The Original mode does not include them.
+
+| Original card | Additional copies |
+| --- | ---: |
+| Карлик (`midget.webp`) | 1 |
+| Приспособленец (`adaptable.webp`) | 1 |
+| Увещеватель (`mutilator.webp`) | 2 |
+| Младенец (`baby.webp`) | 2 |
+
 ## Fiends and residents
 
 | ID | Art | Card | Copies | Immunity | VP | Crusade | Ability | Status |
@@ -11,12 +22,12 @@ This is the expansion catalogue and implementation checklist. It is intentionall
 | demon_herecy | demon_herecy.webp | Демон Ереси | 1 | - | 0 | - | +1 VP per negative resident and per Inquisitor, Pastor, or Preacher in this city. | catalogued / TODO |
 | demon_lust | demon_lust.webp | Демон Похоти | 1 | - | 0 | - | +1 VP per negative resident, woman, Succubus, and Adaptable in this city. | catalogued / TODO |
 | demon_party | demon_party.webp | Демон Кутежа | 1 | - | 0 | - | +1 VP per negative resident and per Fiend in this city; counts itself as Fiend. | catalogued / TODO |
-| duchess | duchess.webp | Графиня | 2 | - | 4 | - | Lures a male commoner from an adjacent city and makes him a courtier. | catalogued / TODO |
-| lady_virgin | lady_virgin.webp | Девственница | 3 | - | 5 | - | Activates one resident’s instant ability in this city; cannot become Fiend. | catalogued / TODO |
+| duchess | duchess.webp | Графиня | 2 | 9 | 4 | - | Lures a male commoner from an adjacent city and makes him a courtier. | catalogued / TODO |
+| lady_virgin | lady_virgin.webp | Девственница | 3 | 12 | 2 | - | Activates one resident’s instant ability in this city; cannot become Fiend. | catalogued / TODO |
 | leprechaun | leprechaun.webp | Лепрекон | 1 | - | 4 | - | Gives 2 points and forces a discard. | catalogued / TODO |
 | leshiy | leshiy.webp | Леший | 1 | - | 0 | - | Moves a Crossroads resident to an adjacent city; that resident’s instant ability does not activate. | catalogued / TODO |
 | mermaid | mermaid.webp | Утопленница | 1 | - | 0 | - | Cannot be killed, only burned. Moves right with one chosen resident. | catalogued / TODO |
-| nunn | nunn.webp | Монахиня | 1 | - | 4 | - | Drives one Fiend away. | catalogued / TODO |
+| nunn | nunn.webp | Монахиня | 3 | 63 | 1 | 2 | Drives one Fiend away. | catalogued / TODO |
 | succub | succub.webp | Суккуб | 1 | - | 4 | - | Searches until the first man or Monster, puts it in this city, then kills a man here. | catalogued / TODO |
 | troll | troll.webp | Тролль | 1 | - | 0 | - | Attacks residents moving across its chosen city boundary; on 4–6 they are discarded. | catalogued / TODO |
 | unicorn | unicorn.webp | Единорог | 1 | - | 4 | - | Moves any resident to an adjacent city and activates its ability. | catalogued / TODO |
