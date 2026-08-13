@@ -429,7 +429,7 @@ function App() {
       const choice = next.pendingChoice;
       const actor = next.players[choice.actorId];
       const victimCity = next.players[playerId];
-      if (!['recruit', 'hare'].includes(choice.ability)) next.pendingChoice = null;
+      if (!['recruit', 'hare', 'driver'].includes(choice.ability)) next.pendingChoice = null;
       if (choice.ability === 'heretic-alch') {
         discardResident(next, victimCity, resident, `✦ Еретик-алхимик уничтожает выбранного жителя`);
         actor.crusade += Math.max(0, resident.vp);
