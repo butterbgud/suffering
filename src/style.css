@@ -92,6 +92,8 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .plague-preview { position: absolute; z-index: 20; top: 34px; left: 8px; width: 116px; padding: 5px; display: grid; gap: 4px; color: #f7dfae; border: 1px solid #d69a4b; background: #25140cf5; box-shadow: 0 8px 25px #000d; text-align: center; pointer-events: none; }
 .plague-preview img { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; }.plague-preview b { font-size: 12px; }.plague-preview small { color: #d2b887; font-size: 11px; line-height: 1.05; }
 .cities { grid-template-columns: repeat(var(--player-count, 4), minmax(0, 1fr)); gap: 16px; }
+.cities.players-3 > .human-city { grid-column: 2; }
+.cities.players-4 > .human-city { grid-column: 2; }
 .city { min-height: 0; border: 0; background: transparent; box-shadow: none; }
 .city.active { border: 0; box-shadow: none; }
 .city-head { display: block; padding: 7px 4px 10px; color: #f1d49d; border: 0; background: transparent; text-align: center; font-weight: 700; }
