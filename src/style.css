@@ -286,3 +286,5 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .monster-choice > div { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
 .monster-choice button { padding: 8px 12px; color: #ffe4b5; background: #58351e; border: 1px solid #c4853d; cursor: pointer; }
 .resident-choice:has(+ .monster-choice) { display: none; }
+.resident-choice:has(~ .destination-modal) { display: none; }
+body:has(.destination-modal) .resident-choice { display: none; }
