@@ -4,9 +4,11 @@
 * { box-sizing: border-box; }
 button { font: inherit; }
 body { margin: 0; min-width: 320px; background: #17100c; }
-.welcome { min-height: 100vh; display: grid; place-items: center; padding: 24px; overflow: hidden; background: linear-gradient(#170d09a8, #170d09c4), url('/assets/ui/MS_bp.webp') center / cover fixed; }
+.welcome { position: relative; min-height: 100vh; display: grid; place-items: center; padding: 24px; overflow: hidden; background: linear-gradient(#170d09a8, #170d09c4), url('/assets/ui/MS_bp.webp') center / cover fixed; }
+.welcome::after { content: ''; position: absolute; z-index: 0; inset: 0; opacity: 0; pointer-events: none; background: linear-gradient(#170d09a8, #170d09c4), url('/assets/fm-bg.webp') center / cover fixed; transition: opacity .8s ease-in-out; }
+.welcome:has(.lobby-options .segmented button:last-child.picked)::after { opacity: 1; }
 .welcome::before { content: ''; position: fixed; inset: 0; pointer-events: none; opacity: .16; background: radial-gradient(circle at 50% 20%, #b57b3780, transparent 36%); }
-.welcome-card { width: min(650px, 100%); position: relative; padding: clamp(30px, 6vw, 70px); text-align: center; }
+.welcome-card { z-index: 1; width: min(650px, 100%); position: relative; padding: clamp(30px, 6vw, 70px); text-align: center; }
 .eyebrow { margin: 0 0 9px; color: #d49c51; font: 700 10px/1.4 Unbounded, sans-serif; text-transform: uppercase; letter-spacing: .19em; }
 h1, h2 { font-weight: 400; margin: 0; line-height: .85; text-wrap: balance; }
 .welcome h1 { color: #f5d498; font-size: clamp(60px, 13vw, 115px); text-shadow: 2px 3px #5c2d16; }
@@ -41,6 +43,7 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .lobby-meta { position: fixed; z-index: 2; top: 18px; left: 20px; display: grid; gap: 7px; justify-items: start; }
 .lobby-meta .option-group { display: none; }
 .lobby-options { display: flex; justify-content: space-between; gap: 18px; margin: 0 0 28px; padding-bottom: 16px; border-bottom: 1px solid #82562d66; }
+.mode-description { max-width: 430px; color: #a78961; font: 13px/1.25 'IM Fell English', Georgia, serif; text-transform: none; letter-spacing: 0; }
 .option-group { display: grid; gap: 7px; color: #c99f64; font: 700 9px Unbounded, sans-serif; text-transform: uppercase; letter-spacing: .09em; }
 .segmented { display: flex; gap: 4px; }
 .segmented button { min-width: 42px; padding: 8px 9px; color: #c49a62; border: 1px solid #80542f; background: #1c110ddd; cursor: pointer; font: 700 10px Unbounded, sans-serif; }

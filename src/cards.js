@@ -4,6 +4,10 @@ const resident = (id, title, estate, immunity, vp, effect = '', crusade = 0, art
   id, title, estate, immunity, vp, effect, crusade, epidemic: false, art: `/assets/cards/${artId}.webp`,
 });
 const disease = (id, title, victims, effect = '') => ({ id, title, victims, copies: 1, effect, epidemic: true, art: `/assets/cards/${id}.webp` });
+const fmResident = (id, title, vp, effect = '', artId = id) => ({ id, title, vp, effect, epidemic: false, expansion: 'feasts', art: `/assets/cards/fm/${artId}.webp` });
+const fmMonster = (id, title, danger, effect = '') => ({ id, title, danger, effect, epidemic: false, monster: true, expansion: 'feasts', art: `/assets/cards/fm/${id}.webp` });
+const fmFestival = (id, title, effect = '') => ({ id, title, effect, epidemic: false, festival: true, expansion: 'feasts', art: `/assets/cards/fm/${id}.webp` });
+const fmRelic = (id, title, vp, effect = '') => ({ id, title, vp, effect, epidemic: false, relic: true, expansion: 'feasts', art: `/assets/cards/fm/${id}.webp` });
 
 // Every playable face in public/assets/cards. CARD_ABILITIES.md is the rules ledger;
 // CARD_COUNTS is deliberately separate so deck composition is easy to tune.
@@ -63,8 +67,47 @@ export const CARD_LIBRARY = [
   disease('syphilis', 'Сифилис', 1, 'Если в исходном городе есть Девка или Распутная девка, начинает с двух жертв.'),
 ];
 
-export function buildDeck() {
-  return CARD_LIBRARY.flatMap((card) => Array.from({ length: CARD_COUNTS[card.id] ?? 0 }, (_, index) => ({ ...card, uid: `${card.id}-${index}-${Math.random().toString(36).slice(2)}` })));
+// Feasts and Monsters cards currently transcribed from the supplied assets and
+// FM.md. Their detailed combat/holiday resolution is layered in separately;
+// keeping them in a distinct catalogue means new scans can be added safely.
+export const FEASTS_LIBRARY = [
+  fmResident('demon_herecy', 'Демон Ереси', 0, '+1 ПО за каждого отрицательного персонажа и за каждого Инквизитора, Пастыря или Проповедника.', 'demon_herecy'),
+  fmResident('demon_lust', 'Демон Похоти', 0, '+1 ПО за каждого отрицательного персонажа, женщину, Суккуба и Приспособленца.', 'demon_lust'),
+  fmResident('demon_party', 'Демон Кутежа', 0, '+1 ПО за каждого отрицательного персонажа и нечисть.', 'demon_party'),
+  fmResident('duchess', 'Графиня', 4, 'Переманивает мужчину-простолюдина из соседнего города и делает его Придворным.'),
+  fmResident('lady_virgin', 'Девственница', 5, 'Активирует мгновенное свойство одного жителя этого города. Не может стать Нечистью.'),
+  fmResident('leprechaun', 'Лепрекон', 4, 'Даёт 2 очка и заставляет сбросить карту.'),
+  fmResident('leshiy', 'Леший', 0, 'Перемещает жителя с Перекрёстка в соседний город.'),
+  fmResident('mermaid', 'Утопленница', 0, 'Нельзя убить, только сжечь. Плывёт в соседний город справа с одним жителем.', 'mermaid'),
+  fmResident('nunn', 'Монахиня', 4, 'Прогоняет одну Нечисть.'),
+  fmResident('succub', 'Суккуб', 4, 'Кладёт в город первого мужчину или Чудовище из колоды и убивает мужчину в этом городе.'),
+  fmResident('troll', 'Тролль', 0, 'Атакует жителей, проходящих между городами; при 4–6 убивает. Переходит на другую сторону города.'),
+  fmResident('unicorn', 'Единорог', 4, 'Отправь любого жителя из этого города в соседний и активируй его свойство.'),
+  fmResident('vurdalak2', 'Вурдалак', 0, 'Заменяет мирного мужчину и перемещается туда, где есть Младенец, Девственница, Монахиня или Леди.'),
+  fmResident('werewolf', 'Оборотень', -3, 'Положи на мирного жителя. В праздник поменяй Оборотня и жителя местами.', 'werewolf'),
+  fmResident('ghost', 'Призрак', 0, 'Положи под мирного жителя. Призрака нельзя убить, кроме Дня всех святых.'),
+  fmResident('hare', 'Заяц на Лужайке', 0, 'Сначала убивает жителей с 0 ПО, затем тех, кто приносит больше всего ПО.'),
+  fmMonster('basilysk', 'Василиск', 5, 'Сначала убивает животных и Карлика, затем тех, кто приносит больше всего ПО.'),
+  fmMonster('dragon', 'Дракон', 7, 'Сначала убивает женщин и Приспособленца, затем тех, кто даёт больше всего ПО.'),
+  fmMonster('giant', 'Гигант с дубиной', 4, 'Сначала похищает Младенцев и Карлика, затем тех, кто даёт больше всего ПО.'),
+  fmMonster('manticore', 'Мантикора', 6, 'Сначала убивает Крестоносцев, затем тех, кто приносит меньше всего ПО.'),
+  fmMonster('rusal', 'Русал', 4, 'Мужчины-крестоносцы бросают только 1 кубик в бою с Русалом.'),
+  fmFestival('Carnival', 'Карнавал', 'Все игроки передают по одному жителю в соседний город слева.'),
+  fmFestival('Walpurgis', 'Вальпургиева ночь', 'Суккубы, Ведьмы, Шлюшки, Бесноватые и Графини переходят в соседние города справа.'),
+  fmFestival('beltain', 'Бельтайн', 'Все игроки сжигают по одному жителю в своём городе.'),
+  fmFestival('christmas', 'Рождество', 'Три карты на Перекрёстке умирают от холода; выложите три новые.'),
+  fmFestival('fair', 'Ярмарка', 'Коля, Палач, Менестрель, Шут и Трубадур срабатывают ещё раз.'),
+  fmFestival('fish', 'Четверг', 'Выложите по карте на игрока; каждый забирает одну и разыгрывает её.'),
+  fmFestival('shabash', 'Шабаш', 'Суккубы, Ведьмы и Бесноватая собираются в городе текущего игрока.'),
+  fmFestival('Cursed Mirror', 'Проклятое зеркало', 'Житель города активирует персонажа на Перекрёстке, словно тот принадлежит ему.'),
+  fmRelic('nercomicon', 'Некрономикон', 3, 'При смерти жителя можно один раз бросить кубик; на 6 он выживает.'),
+  fmRelic('sarchopagus', 'Саркофаг', 2, 'Складывает умерших жителей под себя и возвращает одного в руку.'),
+  fmRelic('excalibur', 'Меч в камне', 4, 'В конце игры брось кубик за каждого простолюдина; первый результат 6 становится дворянином.'),
+];
+
+export function buildDeck({ removeEpidemics = false, includeFeasts = false } = {}) {
+  const library = includeFeasts ? [...CARD_LIBRARY.filter((card) => !removeEpidemics || !card.epidemic), ...FEASTS_LIBRARY] : CARD_LIBRARY;
+  return library.flatMap((card) => Array.from({ length: CARD_COUNTS[card.id] ?? 0 }, (_, index) => ({ ...card, uid: `${card.id}-${index}-${Math.random().toString(36).slice(2)}` })));
 }
 
 export function shuffle(cards) {

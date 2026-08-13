@@ -11,12 +11,17 @@ const QUICK_RULES = {
 const CRUSADE_POOL = { 2: 16, 3: 16, 4: 20, 5: 23, 6: 25 };
 const RELIC_VP = 6;
 const RELIC_CARDS = ['hg1', 'hg2', 'hg3'];
+const GAME_MODES = {
+  original: { ru: 'Оригинал', en: 'Original', description: { ru: 'Базовая игра с Эпидемиями.', en: 'The base game with Epidemics.' }, removeEpidemics: false },
+  feasts: { ru: 'Пиры и чудовища', en: 'Feasts and Monsters', description: { ru: 'Эпидемии убраны по рекомендации FM.md; карты нечисти и чудовищ подключаются отдельным пакетом.', en: 'Epidemics are removed per FM.md; Fiend and Monster cards plug in as a separate package.' }, removeEpidemics: true, includeFeasts: true },
+};
 const CITY_BACKGROUNDS = Object.entries(import.meta.glob('/public/assets/ui/c*.webp', { eager: true, query: '?url', import: 'default' }))
   .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
   .map(([, url]) => url);
 
-function freshGame(botCount, language = 'ru', gameSpeed = 5) {
-  const deck = shuffle(buildDeck());
+function freshGame(botCount, language = 'ru', gameSpeed = 5, gameMode = 'original') {
+  const mode = GAME_MODES[gameMode] || GAME_MODES.original;
+  const deck = shuffle(buildDeck(mode));
   const names = language === 'en' ? ['You', ...Array.from({ length: 5 }, (_, index) => `B${index + 1}`)] : ['Вы', ...Array.from({ length: 5 }, (_, index) => `Б${index + 1}`)];
   const players = Array.from({ length: botCount + 1 }, (_, id) => ({ id, name: names[id], bot: id > 0, city: [], hand: [], crusade: 0, relics: [] }));
   shuffle(CITY_BACKGROUNDS).slice(0, players.length).forEach((background, index) => { players[index].background = background; });
@@ -41,6 +46,7 @@ function freshGame(botCount, language = 'ru', gameSpeed = 5) {
     ended: false,
     language,
     gameSpeed,
+    gameMode,
   };
 }
 
@@ -251,11 +257,18 @@ function ScoreChart({ history, players }) {
   </div>;
 }
 
+function Lobby({ language, setLanguage, botCount, setBotCount, gameSpeed, setGameSpeed, gameMode, setGameMode, start }) {
+  const english = language === 'en';
+  const mode = GAME_MODES[gameMode];
+  return <main className="welcome"><div className="lobby-meta"><div className="option-group"><span>{english ? 'Language' : 'Язык'}</span><div className="segmented"><button className={language === 'ru' ? 'picked' : ''} onClick={() => setLanguage('ru')}>RU</button><button className={language === 'en' ? 'picked' : ''} onClick={() => setLanguage('en')}>EN</button></div></div></div><div className="welcome-card"><p className="eyebrow">{english ? 'A tabletop game, rebuilt from the ashes' : 'Настольная игра, восставшая из пепла'}</p><p className="lede">{english ? 'Medieval city-building, if human life cost roughly half a card.' : 'Средневековое градостроительство, если человеческая жизнь стоила примерно пол-карты.'}</p><div className="lobby-options"><div className="option-group"><span>{english ? 'Ruleset' : 'Режим игры'}</span><div className="segmented"><button className={gameMode === 'original' ? 'picked' : ''} onClick={() => setGameMode('original')}>{GAME_MODES.original[language]}</button><button className={gameMode === 'feasts' ? 'picked' : ''} onClick={() => setGameMode('feasts')}>{GAME_MODES.feasts[language]}</button></div><small className="mode-description">{mode.description[language]}</small></div></div><div className="bot-picker"><span>{english ? 'Opponents' : 'Соперники'}</span>{[1, 2, 3, 4, 5].map((count) => <button key={count} className={botCount === count ? 'picked' : ''} onClick={() => setBotCount(count)}>{count}</button>)}</div><div className="lobby-speed option-group"><span>{english ? 'Game speed' : 'Скорость игры'}</span><div className="segmented"><button className={gameSpeed === 5 ? 'picked' : ''} onClick={() => setGameSpeed(5)}>5s</button><button className={gameSpeed === 10 ? 'picked' : ''} onClick={() => setGameSpeed(10)}>10s</button></div></div><button className="start" onClick={start}>{english ? 'Found a city' : 'Основать город'} <span>→</span></button><p className="rules">{mode.description[language]}</p></div></main>;
+}
+
 function App() {
   const [botCount, setBotCountState] = useState(3);
   const setBotCount = (count) => setBotCountState(Math.max(2, count));
   const [language, setLanguage] = useState('ru');
   const [gameSpeed, setGameSpeed] = useState(5);
+  const [gameMode, setGameMode] = useState('original');
   const [viewMode, setViewMode] = useState('overview');
   const [wheelPlayer, setWheelPlayer] = useState(0);
   const [game, setGame] = useState(null);
@@ -1193,8 +1206,10 @@ function App() {
     return () => clearTimeout(timer);
   }, [game, current?.bot, current?.id, game?.phase]);
 
-  if (!game) {
+  if (!game) return <Lobby language={language} setLanguage={setLanguage} botCount={botCount} setBotCount={setBotCount} gameSpeed={gameSpeed} setGameSpeed={setGameSpeed} gameMode={gameMode} setGameMode={setGameMode} start={() => setGame(freshGame(botCount, language, gameSpeed, gameMode))} />;
+  if (false) {
     const english = language === 'en';
+    const mode = GAME_MODES[gameMode];
     return <main className="welcome"><div className="lobby-meta"><div className="option-group"><span>{english ? 'Language' : 'Язык'}</span><div className="segmented"><button className={language === 'ru' ? 'picked' : ''} onClick={() => setLanguage('ru')}>RU</button><button className={language === 'en' ? 'picked' : ''} onClick={() => setLanguage('en')}>EN</button></div></div><small className="build-version">#{BUILD_VERSION}</small></div><div className="welcome-card"><p className="eyebrow">{english ? 'A tabletop game, rebuilt from the ashes' : 'Настольная игра, восставшая из пепла'}</p><p className="lede">{english ? 'Medieval city-building, if human life cost roughly half a card.' : 'Средневековое градостроительство, если человеческая жизнь стоила примерно пол-карты.'}</p><div className="bot-picker"><span>{english ? 'Opponents' : 'Соперники'}</span>{[1, 2, 3, 4, 5].map((count) => <button key={count} className={botCount === count ? 'picked' : ''} onClick={() => setBotCount(count)}>{count}</button>)}</div><div className="lobby-speed option-group"><span>{english ? 'Game speed' : 'Скорость игры'}</span><div className="segmented"><button className={gameSpeed === 5 ? 'picked' : ''} onClick={() => setGameSpeed(5)}>5s</button><button className={gameSpeed === 10 ? 'picked' : ''} onClick={() => setGameSpeed(10)}>10s</button></div></div><button className="start" onClick={() => setGame(freshGame(botCount, language, gameSpeed))}>{english ? 'Found a city' : 'Основать город'} <span>→</span></button><p className="rules">{english ? 'Each turn: deck → crossroads → play everything. Epidemics move through cities and grow worse when they return home.' : 'Каждый ход: колода → перекрёсток → разыграть всё. Эпидемии ходят по городам и становятся злее, когда возвращаются домой.'}</p></div></main>;
   }
 

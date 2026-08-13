@@ -11,4 +11,10 @@ export const CARD_COUNTS = {
   midget: 1, virgin: 1, deserter: 2, devil: 1, hermit: 1, mutilator: 1,
   possesed: 2, priest: 2, standard_bearer: 2, templar: 2,
   cholera: 1, leprosy: 1, malaria: 1, black_pox: 1, bubonic_plague: 1, syphilis: 1,
+  demon_herecy: 1, demon_lust: 1, demon_party: 1, duchess: 1, lady_virgin: 1,
+  leprechaun: 1, leshiy: 1, mermaid: 1, nunn: 1, succub: 1, troll: 1,
+  unicorn: 1, vurdalak2: 1, werewolf: 1, ghost: 1, hare: 1,
+  basilysk: 1, dragon: 1, giant: 1, manticore: 1, rusal: 1,
+  Carnival: 1, Walpurgis: 1, beltain: 1, christmas: 1, fair: 1, fish: 1, shabash: 1,
+  'Cursed Mirror': 1, nercomicon: 1, sarchopagus: 1, excalibur: 1,
 };
