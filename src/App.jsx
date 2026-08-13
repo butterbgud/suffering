@@ -945,8 +945,8 @@ function App() {
       const drawn = next.deck.splice(0, 2);
       drawn.forEach((drawnCard) => target.hand.push(drawnCard));
       const resumeCurrent = next.current === targetId ? null : next.current;
-      next.forcedPlay = drawn.length ? { playerId: targetId, cardIds: drawn.map((drawnCard) => drawnCard.uid), resumeCurrent } : null;
-      if (drawn.length && resumeCurrent !== null) {
+      next.forcedPlay = drawn.length ? { playerId: targetId, cardIds: drawn.map((drawnCard) => drawnCard.uid), resumeCurrent, source: 'witch' } : null;
+      if (drawn.length && targetId !== next.current) {
         next.current = targetId;
         next.phase = 'play';
       }
