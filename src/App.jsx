@@ -228,10 +228,12 @@ function MinstrelTargetModal({ game, actorId, language, onChoose }) {
 
 function NecromancerModal({ cards, language, onChoose }) {
   const english = language === 'en';
+  const [selectedUid, setSelectedUid] = useState(null);
   return createPortal(<div className="destination-modal" role="dialog" aria-label={english ? 'Choose a discarded card' : 'Выбор карты из сброса'}>
     <div className="destination-panel discard-choice-panel">
       <h2>{english ? 'Choose a card to resurrect' : 'Выбери карту для возвращения'}</h2>
-      <div className="discard-choice-cards">{cards.map((card) => <Card card={card} key={card.uid} selectable selectLabel={english ? 'Resurrect' : 'Вернуть'} onSelect={() => onChoose(card.uid)} />)}</div>
+      <div className="discard-choice-cards">{cards.map((card) => <Card card={card} key={card.uid} directClick onClick={() => setSelectedUid(card.uid)} selected={selectedUid === card.uid} />)}</div>
+      <button className="necromancer-confirm" type="button" disabled={!selectedUid} onClick={() => onChoose(selectedUid)}>{english ? 'Resurrect selected card' : 'Вернуть выбранную карту'}</button>
     </div>
   </div>, document.body);
 }
